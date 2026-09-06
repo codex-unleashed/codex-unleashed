@@ -35,13 +35,11 @@ is_upstream_asset() {
 checked=0
 while IFS= read -r -d '' file; do
   name="$(basename "$file")"
-  normalized="$name"
-
-  # Python wheel filenames carry our vendor build metadata, while their
-  # upstream counterparts carry only the upstream version.
-  if [[ "$name" == *.whl && "$name" =~ (.+)-([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+)(-.+) ]]; then
-    normalized="${BASH_REMATCH[1]}-${BASH_REMATCH[2]}${BASH_REMATCH[4]}"
+  if [[ "$name" != codex-package-*.tar.gz ]]; then
+    echo "Release contains a non-codex-package asset: ${name}" >&2
+    exit 1
   fi
+  normalized="$name"
 
   if ! is_upstream_asset "$normalized"; then
     echo "Release asset is not an upstream asset: ${name}" >&2

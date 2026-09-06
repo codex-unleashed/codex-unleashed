@@ -84,10 +84,6 @@ targets=(
 )
 for target in "${targets[@]}"; do
   expected_assets+=("codex-package-${target}.tar.gz")
-  expected_assets+=("codex-app-server-package-${target}.tar.gz")
-  if [[ "${target}" == *windows* ]]; then
-    expected_assets+=("codex-windows-sandbox-setup-${target}.exe.tar.gz")
-  fi
 done
 
 upstream_assets="$(jq -r '.assets[].name' <<<"${release_json}")"

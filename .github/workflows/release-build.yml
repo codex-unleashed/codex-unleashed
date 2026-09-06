@@ -389,20 +389,14 @@ jobs:
           unix_matrix='[
             {"runner":"ubuntu-latest","target":"x86_64-unknown-linux-musl","bundle":"primary","artifact_name":"x86_64-unknown-linux-musl","binaries":"codex codex-code-mode-host codex-responses-api-proxy bwrap"},
             {"runner":"ubuntu-24.04-arm","target":"aarch64-unknown-linux-musl","bundle":"primary","artifact_name":"aarch64-unknown-linux-musl","binaries":"codex codex-code-mode-host codex-responses-api-proxy bwrap"},
-            {"runner":"ubuntu-latest","target":"x86_64-unknown-linux-musl","bundle":"app-server","artifact_name":"x86_64-unknown-linux-musl-app-server","binaries":"codex-app-server codex-code-mode-host"},
-            {"runner":"ubuntu-24.04-arm","target":"aarch64-unknown-linux-musl","bundle":"app-server","artifact_name":"aarch64-unknown-linux-musl-app-server","binaries":"codex-app-server codex-code-mode-host"},
             {"runner":"macos-15","target":"x86_64-apple-darwin","bundle":"primary","timeout_minutes":180,"artifact_name":"x86_64-apple-darwin","binaries":"codex codex-code-mode-host codex-responses-api-proxy"},
-            {"runner":"macos-15","target":"x86_64-apple-darwin","bundle":"app-server","artifact_name":"x86_64-apple-darwin-app-server","binaries":"codex-app-server codex-code-mode-host"},
-            {"runner":"macos-15","target":"aarch64-apple-darwin","bundle":"primary","timeout_minutes":180,"artifact_name":"aarch64-apple-darwin","binaries":"codex codex-code-mode-host codex-responses-api-proxy"},
-            {"runner":"macos-15","target":"aarch64-apple-darwin","bundle":"app-server","artifact_name":"aarch64-apple-darwin-app-server","binaries":"codex-app-server codex-code-mode-host"}
+            {"runner":"macos-15","target":"aarch64-apple-darwin","bundle":"primary","timeout_minutes":180,"artifact_name":"aarch64-apple-darwin","binaries":"codex codex-code-mode-host codex-responses-api-proxy"}
           ]'
           windows_matrix='[
             {"target":"x86_64-pc-windows-msvc","bundle":"primary","timeout_minutes":180,"binaries":"codex codex-code-mode-host codex-responses-api-proxy"},
             {"target":"aarch64-pc-windows-msvc","bundle":"primary","timeout_minutes":180,"binaries":"codex codex-code-mode-host codex-responses-api-proxy"},
             {"target":"x86_64-pc-windows-msvc","bundle":"helpers","binaries":"codex-windows-sandbox-setup codex-command-runner"},
-            {"target":"aarch64-pc-windows-msvc","bundle":"helpers","binaries":"codex-windows-sandbox-setup codex-command-runner"},
-            {"target":"x86_64-pc-windows-msvc","bundle":"app-server","binaries":"codex-app-server codex-code-mode-host"},
-            {"target":"aarch64-pc-windows-msvc","bundle":"app-server","binaries":"codex-app-server codex-code-mode-host"}
+            {"target":"aarch64-pc-windows-msvc","bundle":"helpers","binaries":"codex-windows-sandbox-setup codex-command-runner"}
           ]'
           filter_matrix() {
             jq -c --arg target "$FOCUS_TARGET" --arg bundle "$FOCUS_BUNDLE" \
@@ -751,41 +745,6 @@ jobs:
           set -euo pipefail
           bash upstream/.github/scripts/install-musl-build-tools.sh
 
-      - name: Normalize Zig paths to upstream release
-        if: ${{ contains(matrix.target, 'linux-musl') }}
-        shell: bash
-        env:
-          TARGET: ${{ matrix.target }}
-          UPSTREAM_TAG: ${{ needs.prepare.outputs.upstream_tag }}
-        run: |
-          set -euo pipefail
-          upstream_binary="${RUNNER_TEMP}/upstream-codex-app-server-${TARGET}"
-          curl -fsSL \
-            "https://github.com/openai/codex/releases/download/${UPSTREAM_TAG}/codex-app-server-package-${TARGET}.tar.gz" \
-            | tar -xzO bin/codex-app-server > "${upstream_binary}"
-
-          upstream_zig_root="$(
-            strings -a "${upstream_binary}" \
-              | sed -n 's#^\(/home/runner/work/_temp/[^/]*/zig-linux-[^/]*/\)lib/libc/include/.*#\1#p' \
-              | sed -n 's#/$##p' \
-              | head -n1
-          )"
-          if [[ -z "${upstream_zig_root}" ]]; then
-            echo "Upstream binary has no embedded Zig path; no path mapping is needed."
-            exit 0
-          fi
-
-          zig_path="$(readlink -f "$(command -v zig)")"
-          zig_root="${zig_path%/zig}"
-          if [[ "${zig_root}" == "${zig_path}" ]]; then
-            echo "ERROR: could not determine local Zig installation path" >&2
-            exit 1
-          fi
-          path_map="-ffile-prefix-map=${zig_root}=${upstream_zig_root} -fdebug-prefix-map=${zig_root}=${upstream_zig_root}"
-          echo "CFLAGS=${CFLAGS} ${path_map}" >> "$GITHUB_ENV"
-          echo "CXXFLAGS=${CXXFLAGS} ${path_map}" >> "$GITHUB_ENV"
-          echo "Mapped Zig path ${zig_root} to ${upstream_zig_root}"
-
       - name: Disable aws-lc jitter entropy (musl)
         if: ${{ contains(matrix.target, 'linux-musl') }}
         shell: bash
@@ -839,57 +798,6 @@ jobs:
           path: ${{ env.CARGO_TARGET_DIR }}/**/cargo-timings/cargo-timing.html
           if-no-files-found: warn
 
-      - name: Build symbols archive and strip binaries
-        shell: bash
-        run: |
-          set -euo pipefail
-          binaries=()
-          for binary in ${{ matrix.binaries }}; do
-            if [[ "$binary" == "bwrap" ]]; then
-              continue
-            fi
-            binaries+=("$binary")
-          done
-          bash "${GITHUB_WORKSPACE}/.github/scripts/archive-release-symbols-and-strip-binaries.sh" \
-            --target "${{ matrix.target }}" \
-            --artifact-name "${{ matrix.artifact_name }}" \
-            --release-dir "${CARGO_TARGET_DIR}/${{ matrix.target }}/release" \
-            --archive-dir "symbols-dist/${{ matrix.artifact_name }}" \
-            --binaries "${binaries[*]}"
-
-      - name: Upload symbols archive
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        with:
-          name: ${{ matrix.artifact_name }}-symbols
-          path: symbols-dist/${{ matrix.artifact_name }}/*
-          if-no-files-found: error
-
-      - name: Cosign Linux artifacts
-        if: ${{ contains(matrix.target, 'linux') }}
-        uses: ./.github/actions/linux-code-sign
-        with:
-          target: ${{ matrix.target }}
-          artifacts-dir: ${{ env.CARGO_TARGET_DIR }}/${{ matrix.target }}/release
-          binaries: ${{ matrix.binaries }}
-
-      - name: Stage artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          release_dir="${CARGO_TARGET_DIR}/${{ matrix.target }}/release"
-          dest="dist/${{ matrix.target }}"
-          mkdir -p "$dest"
-
-          for binary in ${{ matrix.binaries }}; do
-            if [[ "${{ matrix.bundle }}" == "app-server" && "$binary" == "codex-code-mode-host" ]]; then
-              continue
-            fi
-            cp "${release_dir}/${binary}" "$dest/${binary}-${{ matrix.target }}"
-            if [[ "${{ matrix.target }}" == *linux* && -f "${release_dir}/${binary}.sigstore" ]]; then
-              cp "${release_dir}/${binary}.sigstore" "$dest/${binary}-${{ matrix.target }}.sigstore"
-            fi
-          done
-
       - name: Build Codex package archive
         shell: bash
         env:
@@ -905,85 +813,11 @@ jobs:
             --zsh-manifest "${GITHUB_WORKSPACE}/scripts/codex_package/codex-zsh" \
             --rg-manifest "${GITHUB_WORKSPACE}/upstream/scripts/codex_package/rg"
 
-      - name: Build Python runtime wheel
-        if: ${{ matrix.bundle == 'primary' }}
-        shell: bash
-        env:
-          CODEX_VERSION: ${{ needs.prepare.outputs.patched_tag }}
-        run: |
-          set -euo pipefail
-
-          case "${{ matrix.target }}" in
-            aarch64-apple-darwin)
-              platform_tag="macosx_11_0_arm64"
-              ;;
-            x86_64-apple-darwin)
-              platform_tag="macosx_10_9_x86_64"
-              ;;
-            aarch64-unknown-linux-musl)
-              platform_tag="manylinux_2_17_aarch64"
-              ;;
-            x86_64-unknown-linux-musl)
-              platform_tag="manylinux_2_17_x86_64"
-              ;;
-            *)
-              echo "No Python runtime wheel platform tag for ${{ matrix.target }}"
-              exit 1
-              ;;
-          esac
-
-          python3 -m venv "${RUNNER_TEMP}/python-runtime-build-venv"
-          "${RUNNER_TEMP}/python-runtime-build-venv/bin/python" -m pip install build
-
-          stage_dir="${RUNNER_TEMP}/openai-codex-cli-bin-${{ matrix.target }}"
-          wheel_dir="${GITHUB_WORKSPACE}/python-runtime-dist/${{ matrix.target }}"
-          python3 \
-            "${GITHUB_WORKSPACE}/sdk/python/scripts/update_sdk_artifacts.py" \
-            stage-runtime \
-            "$stage_dir" \
-            "dist/${{ matrix.target }}/codex-package-${{ matrix.target }}.tar.gz" \
-            --codex-version "$CODEX_VERSION" \
-            --platform-tag "$platform_tag"
-          "${RUNNER_TEMP}/python-runtime-build-venv/bin/python" -m build --wheel --outdir "$wheel_dir" "$stage_dir"
-
-      - name: Upload Python runtime wheel
-        if: ${{ matrix.bundle == 'primary' }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        with:
-          name: python-runtime-wheel-${{ matrix.target }}
-          path: python-runtime-dist/${{ matrix.target }}/*.whl
-          if-no-files-found: error
-
-      - name: Compress artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          dest="dist/${{ matrix.target }}"
-          for f in "$dest"/*; do
-            base="$(basename "$f")"
-            if [[ "$base" == *.tar.gz || "$base" == *.tar.zst || "$base" == *.zip || "$base" == *.dmg ]]; then
-              continue
-            fi
-            if [[ "$base" == *.sigstore ]]; then
-              continue
-            fi
-            python3 -c "import os, sys; timestamp = int(sys.argv[1]); os.utime(sys.argv[2], (timestamp, timestamp))" "${CODEX_STANDALONE_ARCHIVE_MTIME}" "$f"
-            tar -C "$dest" -czf "$dest/${base}.tar.gz" "$base"
-            zstd -T0 -19 --rm "$dest/$base"
-          done
-
-      - name: Generate checksums
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd "dist/${{ matrix.target }}"
-          sha256sum ./* > SHA256SUMS
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: ${{ matrix.artifact_name }}
-          path: dist/${{ matrix.target }}/
+          path: dist/${{ matrix.target }}/codex-package-${{ matrix.target }}.tar.gz
           if-no-files-found: error
 
       - name: Write build summary
@@ -1191,61 +1025,9 @@ jobs:
           path: |
             ${{ env.CARGO_TARGET_DIR }}/${{ matrix.target }}/release/staged-${{ matrix.bundle }}/*
 
-  build-windows-symbols:
-    needs:
-      - build-windows-binaries
-      - prepare
-    if: >-
-      ${{
-        always() &&
-        needs.prepare.outputs.should_release == 'true' &&
-        inputs.focus_target == '' && inputs.focus_bundle == ''
-      }}
-    name: Build Windows symbols - ${{ matrix.target }}
-    runs-on: ubuntu-latest
-    env:
-      WINDOWS_BINARIES: "codex codex-code-mode-host codex-responses-api-proxy codex-windows-sandbox-setup codex-command-runner codex-app-server"
-    strategy:
-      fail-fast: true
-      matrix:
-        target:
-          - x86_64-pc-windows-msvc
-          - aarch64-pc-windows-msvc
-    steps:
-      - name: Checkout patch repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - uses: ./.github/actions/setup-ci
-
-      - name: Download prebuilt Windows binaries
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          pattern: windows-binaries-${{ matrix.target }}-*
-          merge-multiple: true
-          path: ${{ env.CARGO_TARGET_DIR }}/${{ matrix.target }}/release
-
-      - name: Build symbols archive
-        shell: bash
-        run: |
-          set -euo pipefail
-          bash "${GITHUB_WORKSPACE}/.github/scripts/archive-release-symbols-and-strip-binaries.sh" \
-            --target "${{ matrix.target }}" \
-            --artifact-name "${{ matrix.target }}" \
-            --release-dir "${CARGO_TARGET_DIR}/${{ matrix.target }}/release" \
-            --archive-dir "symbols-dist/${{ matrix.target }}" \
-            --binaries "${WINDOWS_BINARIES}"
-
-      - name: Upload symbols archive
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        with:
-          name: ${{ matrix.target }}-symbols
-          path: symbols-dist/${{ matrix.target }}/*
-          if-no-files-found: error
-
   build-windows-package:
     needs:
       - build-windows-binaries
-      - build-windows-symbols
       - prepare
     if: >-
       ${{
@@ -1262,11 +1044,10 @@ jobs:
           - x86_64-pc-windows-msvc
           - aarch64-pc-windows-msvc
     env:
-      WINDOWS_BINARIES: "codex codex-code-mode-host codex-responses-api-proxy codex-windows-sandbox-setup codex-command-runner codex-app-server"
+      WINDOWS_BINARIES: "codex codex-code-mode-host codex-responses-api-proxy codex-windows-sandbox-setup codex-command-runner"
       CODEX_PACKAGE_ARCHIVE_MTIME: ${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|primary', matrix.target)].archive_mtime }}
       CODEX_PACKAGE_ARCHIVE_GZIP_MTIME: ${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|primary', matrix.target)].archive_gzip_mtime }}
       CODEX_PACKAGE_MEMBER_MTIMES_PRIMARY: ${{ toJSON(fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|primary', matrix.target)].member_mtimes) }}
-      CODEX_PACKAGE_MEMBER_MTIMES_APP_SERVER: ${{ toJSON(fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|app-server', matrix.target)].member_mtimes) }}
       CODEX_STANDALONE_ARCHIVE_MTIME: ${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|primary', matrix.target)].standalone_archive_mtime }}
     steps:
       - name: Checkout patch repo
@@ -1291,12 +1072,6 @@ jobs:
           name: windows-binaries-${{ matrix.target }}-helpers
           path: ${{ env.CARGO_TARGET_DIR }}/${{ matrix.target }}/release
 
-      - name: Download prebuilt Windows app-server binary
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: windows-binaries-${{ matrix.target }}-app-server
-          path: ${{ env.CARGO_TARGET_DIR }}/${{ matrix.target }}/release
-
       - name: Stage artifacts
         shell: bash
         run: |
@@ -1316,113 +1091,26 @@ jobs:
           archive_script="${GITHUB_WORKSPACE}/.github/scripts/build-codex-package-archive.sh"
           temp_root="${RUNNER_TEMP}/codex-package-archives"
 
-          for bundle in primary app-server; do
-            if [[ "$bundle" == primary ]]; then
-              member_mtimes="$CODEX_PACKAGE_MEMBER_MTIMES_PRIMARY"
-            else
-              member_mtimes="$CODEX_PACKAGE_MEMBER_MTIMES_APP_SERVER"
-            fi
-            mkdir -p "$temp_root/$bundle"
-            CODEX_PACKAGE_ARCHIVE_MEMBER_MTIMES="$member_mtimes" \
-              TMPDIR="$temp_root/$bundle" \
-              TMP="$temp_root/$bundle" \
-              TEMP="$temp_root/$bundle" \
-              bash "$archive_script" \
-                --target "$target" \
-                --bundle "$bundle" \
-                --entrypoint-dir "$CARGO_TARGET_DIR/$target/release" \
-                --archive-dir "dist/$target" \
-                --zsh-manifest "${GITHUB_WORKSPACE}/scripts/codex_package/codex-zsh" \
-                --rg-manifest "${GITHUB_WORKSPACE}/upstream/scripts/codex_package/rg"
-          done
-
-      - name: Build Python runtime wheel
-        shell: bash
-        env:
-          CODEX_VERSION: ${{ needs.prepare.outputs.patched_tag }}
-        run: |
-          set -euo pipefail
-
-          python -m venv "${RUNNER_TEMP}/python-runtime-build-venv"
-          "${RUNNER_TEMP}/python-runtime-build-venv/Scripts/python.exe" -m pip install build
-
-          case "${{ matrix.target }}" in
-            aarch64-pc-windows-msvc)
-              platform_tag="win_arm64"
-              ;;
-            x86_64-pc-windows-msvc)
-              platform_tag="win_amd64"
-              ;;
-            *)
-              echo "No Python runtime wheel platform tag for ${{ matrix.target }}"
-              exit 1
-              ;;
-          esac
-
-          stage_dir="${RUNNER_TEMP}/openai-codex-cli-bin-${{ matrix.target }}"
-          wheel_dir="${GITHUB_WORKSPACE}/python-runtime-dist/${{ matrix.target }}"
-          python "${GITHUB_WORKSPACE}/sdk/python/scripts/update_sdk_artifacts.py" \
-            stage-runtime \
-            "$stage_dir" \
-            "dist/${{ matrix.target }}/codex-package-${{ matrix.target }}.tar.gz" \
-            --codex-version "$CODEX_VERSION" \
-            --platform-tag "$platform_tag"
-          "${RUNNER_TEMP}/python-runtime-build-venv/Scripts/python.exe" -m build --wheel --outdir "$wheel_dir" "$stage_dir"
-
-      - name: Upload Python runtime wheel
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        with:
-          name: python-runtime-wheel-${{ matrix.target }}
-          path: python-runtime-dist/${{ matrix.target }}/*.whl
-          if-no-files-found: error
-
-      - name: Compress artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          dest="dist/${{ matrix.target }}"
-          repo_root=$PWD
-          target="${{ matrix.target }}"
-          zstd_wrapper="${GITHUB_WORKSPACE}/upstream/.github/workflows/zstd"
-          export dest repo_root target zstd_wrapper
-          printf '%s\0' "$dest"/* |
-            xargs -0 -n1 -P2 bash -c '
-            set -euo pipefail
-            f=$1
-            base="$(basename "$f")"
-            if [[ "$base" == *.tar.gz || "$base" == *.tar.zst || "$base" == *.zip || "$base" == *.dmg ]]; then
-              exit 0
-            fi
-            if [[ "$base" == *.sigstore ]]; then
-              exit 0
-            fi
-            python3 -c "import os, sys; timestamp = int(sys.argv[1]); os.utime(sys.argv[2], (timestamp, timestamp))" "${CODEX_STANDALONE_ARCHIVE_MTIME}" "$f"
-            tar -C "$dest" -czf "$dest/${base}.tar.gz" "$base"
-            if [[ "$base" == "codex-${target}.exe" ]]; then
-              bundle_dir="$(mktemp -d)"
-              cp "$dest/$base" "$bundle_dir/$base"
-              cp "$dest/codex-command-runner-${target}.exe" "$bundle_dir/codex-command-runner.exe"
-              cp "$dest/codex-windows-sandbox-setup-${target}.exe" "$bundle_dir/codex-windows-sandbox-setup.exe"
-              (cd "$bundle_dir" && 7z a "$repo_root/$dest/${base}.zip" .)
-              rm -rf "$bundle_dir"
-            else
-              (cd "$dest" && 7z a "${base}.zip" "$base")
-            fi
-            "$zstd_wrapper" -T0 -19 "$dest/$base"
-          ' _
-
-      - name: Generate checksums
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd "dist/${{ matrix.target }}"
-          sha256sum ./* > SHA256SUMS
+          bundle=primary
+          member_mtimes="$CODEX_PACKAGE_MEMBER_MTIMES_PRIMARY"
+          mkdir -p "$temp_root/$bundle"
+          CODEX_PACKAGE_ARCHIVE_MEMBER_MTIMES="$member_mtimes" \
+            TMPDIR="$temp_root/$bundle" \
+            TMP="$temp_root/$bundle" \
+            TEMP="$temp_root/$bundle" \
+            bash "$archive_script" \
+              --target "$target" \
+              --bundle "$bundle" \
+              --entrypoint-dir "$CARGO_TARGET_DIR/$target/release" \
+              --archive-dir "dist/$target" \
+              --zsh-manifest "${GITHUB_WORKSPACE}/scripts/codex_package/codex-zsh" \
+              --rg-manifest "${GITHUB_WORKSPACE}/upstream/scripts/codex_package/rg"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: ${{ matrix.target }}
-          path: dist/${{ matrix.target }}/
+          path: dist/${{ matrix.target }}/codex-package-${{ matrix.target }}.tar.gz
           if-no-files-found: error
 
   publish:
@@ -1430,7 +1118,6 @@ jobs:
       - prepare
       - build-unix
       - build-windows-package
-      - build-windows-symbols
     if: >-
       ${{
         always() &&
@@ -1440,8 +1127,7 @@ jobs:
           needs.prepare.outputs.artifact_run_id != github.run_id ||
           (
             needs['build-unix'].result == 'success' &&
-            needs['build-windows-package'].result == 'success' &&
-            needs['build-windows-symbols'].result == 'success'
+            needs['build-windows-package'].result == 'success'
           )
         )
       }}
@@ -1463,15 +1149,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # Match upstream's release workflow: download final target artifacts,
           # not the intermediate build and timing artifacts.
-          pattern: "{aarch64,x86_64}-{apple-darwin{,-app-server},unknown-linux-musl{,-app-server},pc-windows-msvc}"
-
-      - name: Download supplemental release artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          path: release-artifacts
-          run-id: ${{ needs.prepare.outputs.artifact_run_id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          pattern: "{*-symbols,python-runtime-wheel-*}"
+          pattern: "{aarch64,x86_64}-{apple-darwin,unknown-linux-musl,pc-windows-msvc}"
 
       - name: Stage release assets
         shell: bash
@@ -1482,16 +1160,13 @@ jobs:
           while IFS= read -r -d '' file; do
             base="$(basename "$file")"
             case "$base" in
-              cargo-timing.html|SHA256SUMS|*.pdb)
-                continue
-                ;;
-              source-provenance.json|source-provenance-*.json|release-manifest.json)
-                # Keep internal audit reports out of release assets, including
-                # when reusing artifacts from an older build run.
-                continue
+              codex-package-*.tar.gz)
+                staged_name="$base"
                 ;;
               *)
-                staged_name="$base"
+                # Only package archives are release assets. This also keeps
+                # internal build outputs out when artifacts are reused.
+                continue
                 ;;
             esac
             if [[ -n "${seen[$staged_name]+x}" ]]; then
@@ -1501,18 +1176,6 @@ jobs:
             seen[$staged_name]=1
             cp "$file" "release-stage/${staged_name}"
           done < <(find release-artifacts -type f -print0 | sort -z)
-
-      - name: Generate consolidated checksums
-        shell: bash
-        run: |
-          set -euo pipefail
-          (
-            cd release-stage
-            find . -maxdepth 1 -type f \
-              \( -name 'codex-package-*.tar.gz' -o \
-                 -name 'codex-app-server-package-*.tar.gz' \) \
-              -printf '%f\0' | LC_ALL=C sort -z | xargs -0 -r sha256sum > codex-package_SHA256SUMS
-          )
 
       - name: Verify upstream asset contract
         env:
@@ -1527,7 +1190,6 @@ jobs:
         with:
           subject-path: |
             release-stage/codex-package-*.tar.gz
-            release-stage/codex-app-server-package-*.tar.gz
 
       - name: Build release notes
         shell: bash
@@ -1557,7 +1219,7 @@ jobs:
 
           1. Choose the recommended package for your platform below.
           2. Download it from the **Assets** section at the bottom of this page.
-          3. Verify the download with \`codex-package_SHA256SUMS\` before extracting it.
+          3. Extract the archive and follow the platform-specific instructions.
 
           | Platform | Asset |
           | --- | --- |
@@ -1580,7 +1242,6 @@ jobs:
 
           - Build date: \`${{ needs.prepare.outputs.build_date }}\`
           - Supported targets: \`${{ needs.prepare.outputs.supported_targets }}\`
-          - Package release checksums: \`codex-package_SHA256SUMS\`
 
           This release is intended as a temporary patch layer; patches are removed once the corresponding fix is available upstream.
           EOF
@@ -1598,7 +1259,6 @@ jobs:
       - prepare
       - build-unix
       - build-windows-package
-      - build-windows-symbols
       - publish
     if: >-
       ${{
