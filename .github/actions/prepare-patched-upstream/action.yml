@@ -45,6 +45,7 @@ runs:
 
         if git -c core.autocrlf=false init "${CHECKOUT_PATH}" >/dev/null 2>&1 \
           && git -C "${CHECKOUT_PATH}" remote add origin "${repo_url}" \
+          && git -C "${CHECKOUT_PATH}" config core.autocrlf false \
           && git -C "${CHECKOUT_PATH}" -c core.autocrlf=false fetch --depth 1 origin "${UPSTREAM_REF}" \
           && git -C "${CHECKOUT_PATH}" checkout --detach FETCH_HEAD; then
           :
@@ -56,6 +57,8 @@ runs:
           echo "ERROR: failed to clone ${UPSTREAM_REPO} at ${UPSTREAM_REF}" >&2
           exit 1
         fi
+
+        git -C "${CHECKOUT_PATH}" config core.autocrlf false
 
         actual_commit="$(git -C "${CHECKOUT_PATH}" rev-parse HEAD)"
         if [[ -n "${EXPECTED_UPSTREAM_COMMIT}" && "${actual_commit}" != "${EXPECTED_UPSTREAM_COMMIT}" ]]; then
