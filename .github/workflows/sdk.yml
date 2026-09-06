@@ -79,26 +79,6 @@ jobs:
           upstream-ref: ${{ inputs.upstream_ref || 'main' }}
           fallback-to-default-branch: "true"
 
-      - name: Repair upstream Cargo metadata for Bazel
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          manifest = Path("upstream/codex-rs/Cargo.toml")
-          text = manifest.read_text(encoding="utf-8")
-          dependency = 'codex-build-info = { path = "build-info" }'
-          if dependency not in text:
-              marker = "[workspace.dependencies]\n"
-              if marker not in text:
-                  raise SystemExit(f"{manifest} has no workspace dependency section")
-              manifest.write_text(
-                  text.replace(marker, marker + dependency + "\n", 1),
-                  encoding="utf-8",
-              )
-          PY
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:

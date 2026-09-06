@@ -27,6 +27,30 @@ runs:
       with:
         target: ${{ inputs.target }}
 
+    # rust-v0.153.4 has a stale lockfile entry for codex-build-info. Bazel's
+    # rules_rs parser requires the corresponding workspace path dependency,
+    # which upstream added after that release. Keep this CI-only repair close
+    # to the Bazel setup so all Bazel jobs use the same compatibility behavior.
+    - name: Repair upstream Cargo metadata for Bazel
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 - <<'PY'
+        from pathlib import Path
+
+        manifest = Path("upstream/codex-rs/Cargo.toml")
+        text = manifest.read_text(encoding="utf-8")
+        dependency = 'codex-build-info = { path = "build-info" }'
+        if dependency not in text:
+            marker = "[workspace.dependencies]\n"
+            if marker not in text:
+                raise SystemExit(f"{manifest} has no workspace dependency section")
+            manifest.write_text(
+                text.replace(marker, marker + dependency + "\n", 1),
+                encoding="utf-8",
+            )
+        PY
+
     - name: Compute bazel repository cache key
       id: cache_bazel_repository_key
       shell: bash
