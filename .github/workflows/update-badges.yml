@@ -32,7 +32,7 @@ jobs:
 
           mkdir -p docs/badges
 
-          public_patches="$(find patches -type f -name '*.patch' | wc -l | tr -d ' ')"
+          public_patches="$(find patches -type f -name '*.patch' -printf '%h\n' | sort -u | wc -l | tr -d ' ')"
 
           cat > docs/badges/public-patches.json <<EOF
           {

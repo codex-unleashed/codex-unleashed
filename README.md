@@ -12,27 +12,40 @@ A public patch queue and patched binary distribution for OpenAI Codex.
 
 ## Quickstart
 
-### Download a public patched release
+### Install and run Codex CLI
 
-Open the latest [GitHub Release](https://github.com/codex-unleashed/codex-unleashed/releases/latest) and download the archive for your platform.
+Download the latest [public release](https://github.com/codex-unleashed/codex-unleashed/releases/latest) and choose the archive for your platform:
 
-The exact filenames follow the published release artifacts for the current upstream build targets. In practice, pick the artifact matching your OS and architecture.
+- macOS Apple Silicon: `codex-package-aarch64-apple-darwin.tar.gz`
+- macOS Intel: `codex-package-x86_64-apple-darwin.tar.gz`
+- Linux ARM64: `codex-package-aarch64-unknown-linux-musl.tar.gz`
+- Linux x86_64: `codex-package-x86_64-unknown-linux-musl.tar.gz`
+- Windows ARM64: `codex-package-aarch64-pc-windows-msvc.tar.gz`
+- Windows x86_64: `codex-package-x86_64-pc-windows-msvc.tar.gz`
 
-After extracting the archive, run the included `codex` binary the same way you would run upstream Codex.
+Extract the archive, then run the included `codex` executable:
 
-## Get A Fix Faster
+```shell
+tar -xzf codex-package-<platform>.tar.gz
+./codex
+```
 
-- Public release: use the latest [GitHub Release](https://github.com/codex-unleashed/codex-unleashed/releases/latest).
-- Priority access: subscribers receive priority consideration for requested fixes and early access to completed patched builds.
-- New fix request: open an issue and describe the bug, scope, and business impact.
-- Quote request: contact the maintainer directly for private or larger commercial work.
+On Windows, extract the archive and run `codex.exe` from PowerShell:
 
-## Why This Exists
+```powershell
+.\codex.exe
+```
+
+Then sign in with ChatGPT when prompted. Codex Unleashed uses the same CLI workflow and authentication as upstream Codex.
+
+### What is Codex Unleashed?
 
 - Important user-facing issues can take months to be fixed upstream, even when they are time-sensitive for real users and teams.
 - This project bridges that gap by shipping small, targeted fixes for issues that matter to users now, not months later.
 - Patches stay public, auditable, and temporary: they are carried here until the equivalent fix lands upstream, then removed.
 - Subscribers get priority consideration for requested fixes and early access to completed patched builds before those fixes roll into the public release.
+
+Public releases are available from the [latest GitHub Release](https://github.com/codex-unleashed/codex-unleashed/releases/latest). To request a fix, [open an issue](https://github.com/codex-unleashed/codex-unleashed/issues) with the affected version, reproduction steps, scope, and business impact.
 
 ## What To Expect
 
@@ -40,7 +53,7 @@ After extracting the archive, run the included `codex` binary the same way you w
 - No pull requests.
 - No unpaid support queue.
 
-## Early Access Policy
+## Early Access Channel
 
 Subscribers pay US$12 per named developer per month, month-to-month, for priority consideration of requested fixes and early access to completed patched builds.
 
@@ -48,8 +61,7 @@ Subscribers pay US$12 per named developer per month, month-to-month, for priorit
 - You only pay for months when early-release fixes are available. No fixes? Your subscription will be credited.
 - Early-release fixes become eligible for public release at least 30 days after first customer delivery. Fixes that require substantial investment may remain in early access longer.
 - Full terms: [Commercial Terms](docs/COMMERCIAL_TERMS.md)
-
-Paddle: `TODO_PADDLE_URL`
+- Subscribe: https://codex-unleashed.com/
 
 ## How Releases Work
 
@@ -72,6 +84,18 @@ Patched releases add a vendor build number to the upstream version:
 
 The `+25` suffix identifies the vendor build. Build numbers are assigned by the release workflow and distinguish later patched builds based on the same upstream version.
 
+### Build information
+
+Invoke `codex --build-info` to see the provider and upstream details for an installed build:
+
+```text
+vendor: codex-unleashed
+vendor_url: https://github.com/codex-unleashed/codex-unleashed
+upstream_url: https://github.com/openai/codex
+upstream_version: 0.153.4
+build: 25
+```
+
 ## Policies
 
 - Commercial terms: [docs/COMMERCIAL_TERMS.md](docs/COMMERCIAL_TERMS.md)
@@ -87,4 +111,3 @@ This project uses the same license as upstream Codex. See [LICENSE](LICENSE).
 
 - GitHub: [@cowwoc](https://github.com/cowwoc)
 - Email: `cowwoc2020@gmail.com`
-- Paddle: `TODO_PADDLE_URL`
