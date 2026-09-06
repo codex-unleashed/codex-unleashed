@@ -41,6 +41,10 @@ fi
 
 for patch_file in "${patches[@]}"; do
   echo "Applying ${patch_file#${repo_root}/}"
+  if LC_ALL=C grep -q $'\r' "${patch_file}"; then
+    echo "ERROR: patch is not LF-normalized: ${patch_file#${repo_root}/}" >&2
+    exit 1
+  fi
   # CI checkouts are shallow and do not need to create commits from patch files.
   git -C "${target_dir}" apply "${patch_file}"
 done
