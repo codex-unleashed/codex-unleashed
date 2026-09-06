@@ -160,6 +160,7 @@ should_configure_rusty_v8_overrides() {
 
 run_with_heartbeat() {
   local heartbeat_pid=""
+  local command_pid=""
 
   (
     while true; do
@@ -169,11 +170,25 @@ run_with_heartbeat() {
   ) &
   heartbeat_pid=$!
 
+  terminate_children() {
+    trap - INT TERM HUP
+    if [[ -n "${command_pid}" ]] && kill -0 "${command_pid}" 2>/dev/null; then
+      kill -TERM "${command_pid}" 2>/dev/null || true
+    fi
+    if [[ -n "${heartbeat_pid}" ]] && kill -0 "${heartbeat_pid}" 2>/dev/null; then
+      kill -TERM "${heartbeat_pid}" 2>/dev/null || true
+    fi
+  }
+  trap terminate_children INT TERM HUP
+
   set +e
-  "$@"
+  "$@" &
+  command_pid=$!
+  wait "${command_pid}"
   local command_status=$?
   set -e
 
+  trap - INT TERM HUP
   kill "${heartbeat_pid}" >/dev/null 2>&1 || true
   wait "${heartbeat_pid}" 2>/dev/null || true
 

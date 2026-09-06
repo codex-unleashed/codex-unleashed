@@ -425,6 +425,7 @@ jobs:
     if: >-
       ${{
         always() &&
+        !cancelled() &&
         needs.prepare.outputs.should_release == 'true'
       }}
     runs-on: ubuntu-latest
@@ -515,6 +516,7 @@ jobs:
     if: >-
       ${{
         always() &&
+        !cancelled() &&
         needs.prepare.outputs.should_release == 'true' &&
         (
           inputs.focus_target == '' ||
@@ -868,6 +870,7 @@ jobs:
     if: >-
       ${{
         always() &&
+        !cancelled() &&
         needs.prepare.outputs.should_release == 'true' &&
         (inputs.focus_target == '' || contains(inputs.focus_target, 'windows'))
       }}
@@ -991,7 +994,8 @@ jobs:
           for binary in ${{ matrix.binaries }}; do
             build_args+=(--bin "$binary")
           done
-          cargo build --target "$target" --release --timings "${build_args[@]}"
+          bash "${GITHUB_WORKSPACE}/scripts/run-cancellable-command.sh" \
+            cargo build --target "$target" --release --timings "${build_args[@]}"
 
       - name: Upload Cargo timings
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
@@ -1032,6 +1036,7 @@ jobs:
     if: >-
       ${{
         always() &&
+        !cancelled() &&
         needs.prepare.outputs.should_release == 'true' &&
         inputs.focus_target == '' && inputs.focus_bundle == ''
       }}
@@ -1121,6 +1126,7 @@ jobs:
     if: >-
       ${{
         always() &&
+        !cancelled() &&
         needs.prepare.outputs.should_release == 'true' &&
         inputs.focus_target == '' && inputs.focus_bundle == '' &&
         (
