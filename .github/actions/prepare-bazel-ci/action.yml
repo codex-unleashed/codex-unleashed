@@ -38,15 +38,29 @@ runs:
         python3 - <<'PY'
         from pathlib import Path
 
-        manifest = Path("upstream/codex-rs/Cargo.toml")
+        import tomllib
+
+        root = Path("upstream/codex-rs")
+        manifest = root / "Cargo.toml"
         text = manifest.read_text(encoding="utf-8")
-        mapping = 'codex-build-info = { path = "build-info" }'
-        if mapping not in text:
+        mappings = []
+        for package_manifest in root.rglob("Cargo.toml"):
+            with package_manifest.open("rb") as package_file:
+                package = tomllib.load(package_file).get("package")
+            if not package or "name" not in package:
+                continue
+            relative_manifest = package_manifest.relative_to(root)
+            relative_directory = relative_manifest.parent.as_posix() or "."
+            mapping = f'{package["name"]} = {{ path = "{relative_directory}" }}'
+            if mapping not in text:
+                mappings.append(mapping)
+        if mappings:
             marker = "[patch.crates-io]\n"
+            additions = "\n".join(mappings) + "\n"
             if marker in text:
-                repaired = text.replace(marker, marker + mapping + "\n", 1)
+                repaired = text.replace(marker, marker + additions, 1)
             else:
-                repaired = text.rstrip() + "\n\n" + marker + mapping + "\n"
+                repaired = text.rstrip() + "\n\n" + marker + additions
             manifest.write_text(repaired, encoding="utf-8")
         PY
 
