@@ -102,80 +102,20 @@ jobs:
           sudo apt-get update -y
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends pkg-config libcap-dev
 
-      - name: Prepare Bazel CI
-        id: prepare_bazel
-        uses: ./.github/actions/prepare-bazel-ci
-        with:
-          target: x86_64-unknown-linux-gnu
-          cache-scope: sdk
-
-      - name: Restore Bazel disk cache
-        id: restore_bazel_disk_cache
-        continue-on-error: true
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ env.BAZEL_DISK_CACHE }}
-          key: bazel-disk-sdk-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('upstream/MODULE.bazel.lock', 'upstream/codex-rs/Cargo.lock', 'patches/openai/codex/ci/**') }}
-          restore-keys: |
-            bazel-disk-sdk-${{ runner.os }}-${{ runner.arch }}-
-
       - name: Build patched codex binary for SDK tests
         shell: bash
-        env:
-          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
         run: |
           set -euo pipefail
-          cd upstream
-          "${GITHUB_WORKSPACE}/.github/scripts/run-bazel-ci.sh" \
-            --remote-download-toplevel \
-            -- \
-            build \
-            --build_metadata=COMMIT_SHA="${GITHUB_SHA}" \
-            --build_metadata=TAG_job=sdk \
-            -- \
-            //codex-rs/cli:codex \
-            //codex-rs/code-mode-host:codex-code-mode-host
-          cquery_output="$(
-            "${GITHUB_WORKSPACE}/.github/scripts/run-bazel-ci.sh" \
-              -- \
-              cquery \
-              --output=files \
-              -- \
-              //codex-rs/cli:codex \
-              | grep -E '^(/|bazel-out/)' \
-              | tail -n 1
-          )"
-          if [[ "${cquery_output}" = /* ]]; then
-            codex_bazel_output_path="${cquery_output}"
-          else
-            codex_bazel_output_path="${GITHUB_WORKSPACE}/upstream/${cquery_output}"
-          fi
-          [[ -e "${codex_bazel_output_path}" ]] || {
-            echo "Unable to locate Bazel-built codex at ${codex_bazel_output_path}." >&2
-            exit 1
-          }
-          code_mode_host_output_path="$(${GITHUB_WORKSPACE}/.github/scripts/run-bazel-ci.sh \
-            -- \
-            cquery \
-            --output=files \
-            -- \
-            //codex-rs/code-mode-host:codex-code-mode-host \
-            | grep -E '^(/|bazel-out/)' \
-            | tail -n 1)"
-          if [[ "${code_mode_host_output_path}" != /* ]]; then
-            code_mode_host_output_path="${GITHUB_WORKSPACE}/upstream/${code_mode_host_output_path}"
-          fi
-          [[ -e "${code_mode_host_output_path}" ]] || {
-            echo "Unable to locate the Bazel-built codex code-mode host at ${code_mode_host_output_path}." >&2
-            exit 1
-          }
+          cargo build --manifest-path upstream/codex-rs/Cargo.toml --locked --release \
+            --package codex-cli \
+            --package codex-code-mode-host
           install_dir="${RUNNER_TEMP}/codex-sdk-ci"
           mkdir -p "${install_dir}"
-          install -m 755 "${codex_bazel_output_path}" "${install_dir}/codex"
-          install -m 755 "${code_mode_host_output_path}" "${install_dir}/codex-code-mode-host"
+          install -m 755 upstream/codex-rs/target/release/codex "${install_dir}/codex"
+          install -m 755 upstream/codex-rs/target/release/codex-code-mode-host "${install_dir}/codex-code-mode-host"
           echo "CODEX_EXEC_PATH=${install_dir}/codex" >> "${GITHUB_ENV}"
 
-      - name: Warm up Bazel-built codex
+      - name: Warm up Cargo-built codex
         run: "${CODEX_EXEC_PATH} --version"
 
       - name: Install workspace dependencies
@@ -202,27 +142,6 @@ jobs:
         run: |
           set -euo pipefail
           pnpm --dir upstream/sdk/typescript run test
-
-      - name: Shut down Bazel before saving caches
-        if: always() && !cancelled()
-        shell: bash
-        run: bazel shutdown || true
-
-      - name: Save Bazel disk cache
-        if: always() && !cancelled()
-        continue-on-error: true
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ env.BAZEL_DISK_CACHE }}
-          key: bazel-disk-sdk-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('upstream/MODULE.bazel.lock', 'upstream/codex-rs/Cargo.lock', 'patches/openai/codex/ci/**') }}
-
-      - name: Save Bazel repository cache
-        if: always() && !cancelled()
-        continue-on-error: true
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ steps.prepare_bazel.outputs.repository-cache-path }}
-          key: ${{ steps.prepare_bazel.outputs.repository-cache-key }}
 
       - name: Check for a clean worktree
         if: always() && !cancelled()
