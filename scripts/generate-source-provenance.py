@@ -116,9 +116,19 @@ def main() -> int:
             run_git(checkout, "add", "--force", "--", path, index=index)
         patched_tree = run_git(checkout, "write-tree", index=index)
         if patched_tree != expected_tree:
+            tree_diff = run_git(
+                checkout,
+                "diff-tree",
+                "--no-commit-id",
+                "--name-status",
+                "-r",
+                expected_tree,
+                patched_tree,
+            )
             raise ValueError(
                 "Source audit failed: checkout is not upstream HEAD plus patches/. "
-                f"Expected tree {expected_tree}, got {patched_tree}"
+                f"Expected tree {expected_tree}, got {patched_tree}. "
+                f"Differing paths:\n{tree_diff}"
             )
         changed_paths = run_git(checkout, "diff", "--cached", "--name-only", "-z", "HEAD", index=index)
         changed_paths = [path for path in changed_paths.split("\0") if path]
