@@ -18,7 +18,11 @@ runs:
         version="$(python3 "${GITHUB_WORKSPACE}/.github/scripts/rusty_v8_bazel.py" resolved-v8-crate-version)"
         release_tag="rusty-v8-v${version}"
         base_url="https://github.com/openai/codex/releases/download/${release_tag}"
-        binding_dir="${RUNNER_TEMP}/rusty_v8"
+        # Make the override path unique per workflow run. Cargo records the
+        # override path in the v8 build-script fingerprint; reusing a stable
+        # path across hosted runners can make Cargo skip staging an archive
+        # that only existed on the previous runner.
+        binding_dir="${RUNNER_TEMP}/rusty_v8/${GITHUB_RUN_ID}"
         cache_dir="${GITHUB_WORKSPACE}/.cache/rusty_v8/${TARGET}"
         profile="ptrcomp_sandbox_release"
 
