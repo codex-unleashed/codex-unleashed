@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       upstream_ref:
-        description: "Optional upstream ref to test. Defaults to main."
+        description: "Optional upstream ref to test. Defaults to the supported release."
         required: false
         type: string
 
@@ -20,7 +20,7 @@ jobs:
     name: cargo-deny
     uses: ./.github/workflows/cargo-deny.yml
     with:
-      upstream_ref: ${{ inputs.upstream_ref || 'main' }}
+      upstream_ref: ${{ inputs.upstream_ref || 'rust-v0.153.4' }}
     secrets: inherit
 
   codespell:
@@ -32,21 +32,21 @@ jobs:
     name: repo-checks
     uses: ./.github/workflows/repo-checks.yml
     with:
-      upstream_ref: ${{ inputs.upstream_ref || 'main' }}
+      upstream_ref: ${{ inputs.upstream_ref || 'rust-v0.153.4' }}
     secrets: inherit
 
   rust-ci:
     name: rust-ci
     uses: ./.github/workflows/rust-ci.yml
     with:
-      upstream_ref: ${{ inputs.upstream_ref || 'main' }}
+      upstream_ref: ${{ inputs.upstream_ref || 'rust-v0.153.4' }}
     secrets: inherit
 
   sdk:
     name: sdk
     uses: ./.github/workflows/sdk.yml
     with:
-      upstream_ref: ${{ inputs.upstream_ref || 'main' }}
+      upstream_ref: ${{ inputs.upstream_ref || 'rust-v0.153.4' }}
     secrets: inherit
 
   required:
