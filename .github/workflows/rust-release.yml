@@ -10,8 +10,8 @@ on:
         description: "Optional upstream tag override. Defaults to the pushed rust-v* tag."
         required: false
         type: string
-      patch_release_number:
-        description: "Optional patched release suffix override. Defaults to 0."
+      build_number:
+        description: "Optional vendor build number. Defaults to the workflow run number."
         required: false
         type: string
 
@@ -31,7 +31,7 @@ jobs:
           if [[ -n "${INPUT_UPSTREAM_TAG}" ]]; then
             upstream_tag="${INPUT_UPSTREAM_TAG}"
           elif [[ "${GITHUB_REF_NAME}" =~ ^rust-v[0-9] ]]; then
-            upstream_tag="${GITHUB_REF_NAME}"
+            upstream_tag="${GITHUB_REF_NAME%%+*}"
           else
             echo "Could not resolve upstream tag." >&2
             exit 1
@@ -43,5 +43,5 @@ jobs:
     uses: ./.github/workflows/release-build.yml
     with:
       upstream_tag: ${{ needs.resolve.outputs.upstream_tag }}
-      patch_release_number: ${{ inputs.patch_release_number || '0' }}
+      build_number: ${{ inputs.build_number || '' }}
     secrets: inherit

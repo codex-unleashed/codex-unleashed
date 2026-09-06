@@ -16,12 +16,12 @@ def sha256_file(path: Path) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate a machine-readable release manifest for codex-fixes."
+        description="Generate a machine-readable release manifest for codex-unleashed."
     )
     parser.add_argument("--release-dir", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--patch-repo", required=True)
-    parser.add_argument("--patch-repository", default="cowwoc/codex-fixes")
+    parser.add_argument("--patch-repository", default="codex-unleashed/codex-unleashed")
     parser.add_argument("--upstream-repository", default="openai/codex")
     parser.add_argument("--upstream-tag", default="")
     parser.add_argument("--upstream-commit", required=True)

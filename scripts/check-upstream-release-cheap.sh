@@ -144,9 +144,17 @@ echo "Cheap upstream release check passed for ${upstream_tag}. No compilation wa
 
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
   needs_full="false"
-  if [[ "${GITHUB_EVENT_NAME:-}" == "schedule" ]] \
-    && ! gh release view "${upstream_tag}.0" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+  if [[ "${GITHUB_EVENT_NAME:-}" == "schedule" ]]; then
+    existing_release="false"
+    while IFS= read -r release_tag; do
+      if [[ "${release_tag}" == "${upstream_tag}+"* ]]; then
+        existing_release="true"
+        break
+      fi
+    done < <(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq '.[] | .tag_name')
+    if [[ "${existing_release}" != "true" ]]; then
     needs_full="true"
+    fi
   fi
   echo "upstream_tag=${upstream_tag}" >> "${GITHUB_OUTPUT}"
   echo "needs_full=${needs_full}" >> "${GITHUB_OUTPUT}"

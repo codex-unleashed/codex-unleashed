@@ -32,28 +32,13 @@ jobs:
 
           mkdir -p docs/badges
 
-          public_fixes="$(find patches -mindepth 3 -maxdepth 3 -type d -name 'issue-*' | wc -l | tr -d ' ')"
-          upstream_bug_dir="patches/openai/codex"
-          if [[ -d "$upstream_bug_dir" ]]; then
-            upstream_bugs="$(find "$upstream_bug_dir" -mindepth 1 -maxdepth 1 -type d -name 'issue-*' | wc -l | tr -d ' ')"
-          else
-            upstream_bugs="0"
-          fi
+          public_patches="$(find patches -type f -name '*.patch' | wc -l | tr -d ' ')"
 
-          cat > docs/badges/upstream-bugs.json <<EOF
+          cat > docs/badges/public-patches.json <<EOF
           {
             "schemaVersion": 1,
-            "label": "upstream bugs",
-            "message": "${upstream_bugs}",
-            "color": "8250df"
-          }
-          EOF
-
-          cat > docs/badges/public-fixes.json <<EOF
-          {
-            "schemaVersion": 1,
-            "label": "public fixes",
-            "message": "${public_fixes}",
+            "label": "public patches",
+            "message": "${public_patches}",
             "color": "2ea44f"
           }
           EOF
@@ -62,12 +47,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- docs/badges/upstream-bugs.json docs/badges/public-fixes.json; then
+          if git diff --quiet -- docs/badges/public-patches.json; then
             exit 0
           fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/badges/upstream-bugs.json docs/badges/public-fixes.json
+          git add docs/badges/public-patches.json
           git commit -m "Update README badges"
           git push

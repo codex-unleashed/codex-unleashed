@@ -24,8 +24,9 @@ def main():
         "gh", "api", "--paginate", "--slurp",
         f"repos/{repository}/releases?per_page=100",
     ], text=True))
+    build_tag = re.compile(rf"{re.escape(tag)}\+\d+")
     needed = not any(
-        release["tag_name"] == f"{tag}.0"
+        build_tag.fullmatch(release["tag_name"])
         for page in releases for release in page
     )
     with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:

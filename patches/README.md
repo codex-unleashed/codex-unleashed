@@ -9,8 +9,8 @@ Examples:
 
 - `patches/openai/codex/issue-1234/README.md`
 - `patches/openai/codex/issue-1234/fix-crash-on-startup.patch`
-- `patches/cowwoc/codex-fixes/issue-12/README.md`
-- `patches/cowwoc/codex-fixes/issue-12/fix-release-notes.patch`
+- `patches/codex-unleashed/codex-unleashed/issue-12/README.md`
+- `patches/codex-unleashed/codex-unleashed/issue-12/fix-release-notes.patch`
 
 Operational rules:
 

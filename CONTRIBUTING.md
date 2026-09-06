@@ -4,7 +4,7 @@ This repository does not accept pull requests.
 
 ## Why
 
-`codex-fixes` is intended to remain a narrowly-scoped public patch queue for reviewed Codex fixes, not a general fork.
+`codex-unleashed` is intended to remain a narrowly-scoped public patch queue for reviewed Codex fixes and features, not a general fork.
 
 ## What To Do Instead
 

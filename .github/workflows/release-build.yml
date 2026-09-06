@@ -7,8 +7,8 @@ on:
         description: "Optional upstream tag override."
         required: false
         type: string
-      patch_release_number:
-        description: "Optional patched release suffix override. Defaults to 0."
+      build_number:
+        description: "Optional vendor build number. Defaults to the workflow run number."
         required: false
         type: string
       artifact_run_id:
@@ -39,8 +39,8 @@ on:
         description: "Optional upstream tag override."
         required: false
         type: string
-      patch_release_number:
-        description: "Optional patched release suffix override. Defaults to 0."
+      build_number:
+        description: "Optional vendor build number. Defaults to the workflow run number."
         required: false
         type: string
       artifact_run_id:
@@ -93,6 +93,7 @@ jobs:
     outputs:
       should_release: ${{ steps.prepare.outputs.should_release }}
       upstream_tag: ${{ steps.prepare.outputs.upstream_tag }}
+      build_number: ${{ steps.prepare.outputs.build_number }}
       upstream_sha: ${{ steps.prepare.outputs.upstream_sha }}
       patched_tag: ${{ steps.prepare.outputs.patched_tag }}
       release_name: ${{ steps.prepare.outputs.release_name }}
@@ -122,7 +123,7 @@ jobs:
         shell: bash
         env:
           INPUT_UPSTREAM_TAG: ${{ inputs.upstream_tag || '' }}
-          INPUT_PATCH_RELEASE_NUMBER: ${{ inputs.patch_release_number || '' }}
+          INPUT_BUILD_NUMBER: ${{ inputs.build_number || '' }}
           INPUT_ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id || '' }}
           INPUT_FOCUS_TARGET: ${{ inputs.focus_target || '' }}
           INPUT_FOCUS_BUNDLE: ${{ inputs.focus_bundle || '' }}
@@ -224,7 +225,7 @@ jobs:
             exit 0
           fi
 
-          patch_release="${INPUT_PATCH_RELEASE_NUMBER:-0}"
+          build_number="${INPUT_BUILD_NUMBER:-${GITHUB_RUN_NUMBER}}"
           build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           if [[ -n "${INPUT_UPSTREAM_TAG:-}" ]]; then
@@ -256,7 +257,7 @@ jobs:
             exit 0
           fi
 
-          patched_tag="${upstream_tag}.${patch_release}"
+          patched_tag="${upstream_tag}+${build_number}"
           release_name="${patched_tag#rust-v}"
           failure_marker_name="failed-upstream-release-${patched_tag}-${GITHUB_SHA}"
           export failure_marker_name
@@ -359,6 +360,7 @@ jobs:
 
           echo "should_release=true" >> "${GITHUB_OUTPUT}"
           echo "upstream_tag=${upstream_tag}" >> "${GITHUB_OUTPUT}"
+          echo "build_number=${build_number}" >> "${GITHUB_OUTPUT}"
           echo "upstream_sha=${upstream_sha}" >> "${GITHUB_OUTPUT}"
           echo "patched_tag=${patched_tag}" >> "${GITHUB_OUTPUT}"
           echo "release_name=${release_name}" >> "${GITHUB_OUTPUT}"
@@ -448,9 +450,6 @@ jobs:
 
       - uses: ./.github/actions/setup-ci
 
-      - name: Set up nightly Rust for upstream release checks
-        uses: dtolnay/rust-toolchain@nightly
-
       - name: Setup pnpm
         uses: pnpm/action-setup@a8198c4bff370c8506180b035930dea56dbd5288 # v5
         with:
@@ -536,6 +535,7 @@ jobs:
       contents: read
       id-token: write
     env:
+      CODEX_UNLEASHED_BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
       CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO: ${{ contains(matrix.target, 'apple-darwin') && 'packed' || 'off' }}
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       # This mode is opt-in because serializing LLVM can significantly slow
@@ -653,6 +653,7 @@ jobs:
         with:
           upstream-ref: ${{ needs.prepare.outputs.upstream_tag }}
           expected-upstream-commit: ${{ needs.prepare.outputs.upstream_sha }}
+          apply-patches: false
 
       - name: Align upstream checkout with release path
         shell: bash
@@ -795,7 +796,17 @@ jobs:
           target_no_jitter="${target_no_jitter//-/_}"
           echo "${target_no_jitter}=1" >> "$GITHUB_ENV"
 
-      - name: Record source provenance before build
+      - name: Build patched release
+        shell: bash
+        run: |
+          set -euo pipefail
+          export UPSTREAM_TARGET="${{ matrix.target }}"
+          export UPSTREAM_BINARIES="${{ matrix.binaries }}"
+          export SKIP_UPSTREAM_TESTS=1
+          export SKIP_ARTIFACT_COLLECTION=1
+          ./scripts/build-release.sh upstream "${RUNNER_TEMP}/upstream-build-output"
+
+      - name: Record source provenance
         shell: bash
         env:
           UPSTREAM_REF: ${{ needs.prepare.outputs.upstream_tag }}
@@ -813,17 +824,6 @@ jobs:
             --workflow-sha "$WORKFLOW_SHA" \
             --workflow-run-id "$WORKFLOW_RUN_ID"
           mv source-provenance.json "source-provenance-${{ matrix.target }}-${{ matrix.bundle }}.json"
-
-      - name: Build patched release
-        shell: bash
-        run: |
-          set -euo pipefail
-          export UPSTREAM_TARGET="${{ matrix.target }}"
-          export UPSTREAM_BINARIES="${{ matrix.binaries }}"
-          export SKIP_UPSTREAM_TESTS=1
-          export SKIP_ARTIFACT_COLLECTION=1
-          export SKIP_PATCH_APPLICATION=1
-          ./scripts/build-release.sh upstream "${RUNNER_TEMP}/upstream-build-output"
 
       - name: Upload source provenance
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
@@ -1041,6 +1041,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: ${{ matrix.timeout_minutes || 180 }}
     env:
+      CODEX_UNLEASHED_BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
       SOURCE_DATE_EPOCH: ${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
       CODEX_PACKAGE_ARCHIVE_MTIME: ${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].archive_mtime }}
       CODEX_PACKAGE_ARCHIVE_GZIP_MTIME: ${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].archive_gzip_mtime }}
@@ -1512,6 +1513,14 @@ jobs:
                  -name 'codex-app-server-package-*.tar.gz' \) \
               -printf '%f\0' | LC_ALL=C sort -z | xargs -0 -r sha256sum > codex-package_SHA256SUMS
           )
+
+      - name: Verify upstream asset contract
+        env:
+          UPSTREAM_TAG: ${{ needs.prepare.outputs.upstream_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/verify-release-asset-contract.sh openai/codex "$UPSTREAM_TAG" release-stage
 
       - name: Attest release package archives
         uses: actions/attest-build-provenance@v2

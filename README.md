@@ -1,20 +1,20 @@
-# Codex Fixes
+# Codex Unleashed
 
 A public patch queue and patched binary distribution for OpenAI Codex.
 
 > Warning: Unofficial, not affiliated with OpenAI.
 
-[![License](https://img.shields.io/github/license/cowwoc/codex-fixes)](https://github.com/cowwoc/codex-fixes/blob/main/LICENSE)
-[![Upstream bugs](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cowwoc/codex-fixes/main/docs/badges/upstream-bugs.json)](https://github.com/cowwoc/codex-fixes/tree/main/patches/openai/codex)
-[![Public fixes](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cowwoc/codex-fixes/main/docs/badges/public-fixes.json)](https://github.com/cowwoc/codex-fixes/tree/main/patches)
+[![License](https://img.shields.io/github/license/codex-unleashed/codex-unleashed)](https://github.com/codex-unleashed/codex-unleashed/blob/main/LICENSE)
+[![Public patches](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/codex-unleashed/codex-unleashed/main/docs/badges/public-patches.json)](https://github.com/codex-unleashed/codex-unleashed/tree/main/patches)
+[![Early-access patches](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/codex-unleashed/codex-unleashed/main/docs/badges/early-access.json)](https://codex-unleashed.com/)
 
-**[Get unstuck sooner →](https://cowwoc.github.io/codex-fixes/)**
+**[Get early access to Codex fixes and features →](https://codex-unleashed.com/)**
 
 ## Quickstart
 
 ### Download a public patched release
 
-Open the latest [GitHub Release](https://github.com/cowwoc/codex-fixes/releases/latest) and download the archive for your platform.
+Open the latest [GitHub Release](https://github.com/codex-unleashed/codex-unleashed/releases/latest) and download the archive for your platform.
 
 The exact filenames follow the published release artifacts for the current upstream build targets. In practice, pick the artifact matching your OS and architecture.
 
@@ -22,7 +22,7 @@ After extracting the archive, run the included `codex` binary the same way you w
 
 ## Get A Fix Faster
 
-- Public release: use the latest [GitHub Release](https://github.com/cowwoc/codex-fixes/releases/latest).
+- Public release: use the latest [GitHub Release](https://github.com/codex-unleashed/codex-unleashed/releases/latest).
 - Priority access: subscribers receive priority consideration for requested fixes and early access to completed patched builds.
 - New fix request: open an issue and describe the bug, scope, and business impact.
 - Quote request: contact the maintainer directly for private or larger commercial work.
@@ -66,12 +66,11 @@ Every release notes page lists:
 
 ## Versioning
 
-Patched releases append a patch release number to the upstream version:
+Patched releases add a vendor build number to the upstream version:
 
-- Upstream `1.3.6` -> patched `1.3.6.0`
-- Second patched rebuild -> `1.3.6.1`
+- Upstream `1.3.6` -> patched `1.3.6+25`
 
-The `.0` release is the first patched build for that upstream version. Higher suffixes are rebuilds or subsequent patched republish events for the same upstream version.
+The `+25` suffix identifies the vendor build. Build numbers are assigned by the release workflow and distinguish later patched builds based on the same upstream version.
 
 ## Policies
 

@@ -5,7 +5,7 @@ usage() {
   cat <<'EOF'
 Usage: verify-release.sh <release-dir> [options]
 
-Verifies a codex-fixes release directory against its release manifest.
+Verifies a codex-unleashed release directory against its release manifest.
 
 Options:
   --manifest <path>          Override the manifest path. Default: <release-dir>/release-manifest.json
