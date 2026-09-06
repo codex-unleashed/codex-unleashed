@@ -796,17 +796,7 @@ jobs:
           target_no_jitter="${target_no_jitter//-/_}"
           echo "${target_no_jitter}=1" >> "$GITHUB_ENV"
 
-      - name: Build patched release
-        shell: bash
-        run: |
-          set -euo pipefail
-          export UPSTREAM_TARGET="${{ matrix.target }}"
-          export UPSTREAM_BINARIES="${{ matrix.binaries }}"
-          export SKIP_UPSTREAM_TESTS=1
-          export SKIP_ARTIFACT_COLLECTION=1
-          ./scripts/build-release.sh upstream "${RUNNER_TEMP}/upstream-build-output"
-
-      - name: Record source provenance
+      - name: Record source provenance before build
         shell: bash
         env:
           UPSTREAM_REF: ${{ needs.prepare.outputs.upstream_tag }}
@@ -824,6 +814,16 @@ jobs:
             --workflow-sha "$WORKFLOW_SHA" \
             --workflow-run-id "$WORKFLOW_RUN_ID"
           mv source-provenance.json "source-provenance-${{ matrix.target }}-${{ matrix.bundle }}.json"
+
+      - name: Build patched release
+        shell: bash
+        run: |
+          set -euo pipefail
+          export UPSTREAM_TARGET="${{ matrix.target }}"
+          export UPSTREAM_BINARIES="${{ matrix.binaries }}"
+          export SKIP_UPSTREAM_TESTS=1
+          export SKIP_ARTIFACT_COLLECTION=1
+          ./scripts/build-release.sh upstream "${RUNNER_TEMP}/upstream-build-output"
 
       - name: Upload source provenance
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
