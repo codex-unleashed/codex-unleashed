@@ -106,7 +106,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cargo build --manifest-path upstream/codex-rs/Cargo.toml --locked --release \
+          # The supported upstream tag has a stale Cargo.lock; let Cargo
+          # refresh the temporary CI checkout before building its binaries.
+          cargo build --manifest-path upstream/codex-rs/Cargo.toml --release \
             --package codex-cli \
             --package codex-code-mode-host
           install_dir="${RUNNER_TEMP}/codex-sdk-ci"
