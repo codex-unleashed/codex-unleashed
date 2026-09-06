@@ -653,7 +653,6 @@ jobs:
         with:
           upstream-ref: ${{ needs.prepare.outputs.upstream_tag }}
           expected-upstream-commit: ${{ needs.prepare.outputs.upstream_sha }}
-          apply-patches: false
 
       - name: Align upstream checkout with release path
         shell: bash
@@ -823,6 +822,7 @@ jobs:
           export UPSTREAM_BINARIES="${{ matrix.binaries }}"
           export SKIP_UPSTREAM_TESTS=1
           export SKIP_ARTIFACT_COLLECTION=1
+          export SKIP_PATCH_APPLICATION=1
           ./scripts/build-release.sh upstream "${RUNNER_TEMP}/upstream-build-output"
 
       - name: Upload source provenance
