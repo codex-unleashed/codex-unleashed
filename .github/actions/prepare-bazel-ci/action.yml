@@ -43,10 +43,11 @@ runs:
         mapping = 'codex-build-info = { path = "build-info" }'
         if mapping not in text:
             marker = "[patch.crates-io]\n"
-            manifest.write_text(
-                text.rstrip() + "\n\n" + marker + mapping + "\n",
-                encoding="utf-8",
-            )
+            if marker in text:
+                repaired = text.replace(marker, marker + mapping + "\n", 1)
+            else:
+                repaired = text.rstrip() + "\n\n" + marker + mapping + "\n"
+            manifest.write_text(repaired, encoding="utf-8")
         PY
 
     - name: Compute bazel repository cache key
