@@ -8,7 +8,8 @@ diff --git a/codex-rs/tui/src/chatwidget/replay.rs b/codex-rs/tui/src/chatwidget
 index 61d69d1..8ed4df4 100644
 --- a/codex-rs/tui/src/chatwidget/replay.rs
 +++ b/codex-rs/tui/src/chatwidget/replay.rs
-@@ -32,0 +33,13 @@
+@@ -14,5 +14,18 @@
+     pub(crate) fn replay_thread_turns(&mut self, turns: Vec<Turn>, replay_kind: ReplayKind) {
 +        let first_latest_conversation_turn = turns
 +            .iter()
 +            .rposition(|turn| {
@@ -22,6 +23,9 @@ index 61d69d1..8ed4df4 100644
 +            .into_iter()
 +            .skip(first_latest_conversation_turn)
 +            .collect::<Vec<_>>();
+         let hidden_nested_review_turns = std::iter::once(/*value*/ false)
+             .chain(turns.windows(/*size*/ 2).map(|turns| {
+                 crate::app_backtrack::is_hidden_nested_review_turn(&turns[0], &turns[1])
+             }))
 -- 
 2.43.0
-
