@@ -448,6 +448,9 @@ jobs:
 
       - uses: ./.github/actions/setup-ci
 
+      - name: Set up nightly Rust for upstream release checks
+        uses: dtolnay/rust-toolchain@nightly
+
       - name: Setup pnpm
         uses: pnpm/action-setup@a8198c4bff370c8506180b035930dea56dbd5288 # v5
         with:
