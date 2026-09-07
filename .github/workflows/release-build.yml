@@ -33,6 +33,11 @@ on:
         required: false
         default: off
         type: string
+      cache_audit:
+        description: "Upload a complete Cargo cache file/size manifest for one diagnostic run."
+        required: false
+        default: false
+        type: boolean
   workflow_dispatch:
     inputs:
       upstream_tag:
@@ -71,6 +76,11 @@ on:
         options:
           - off
           - deterministic
+      cache_audit:
+        description: "Upload a complete Cargo cache file/size manifest for one diagnostic run."
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: >-
@@ -78,7 +88,7 @@ concurrency:
       inputs.focus_target || 'all-targets'
     }}-${{ inputs.focus_bundle || 'all-bundles' }}-${{
       inputs.reproducibility_mode || 'off'
-    }}
+    }}-${{ inputs.cache_audit || 'false' }}
   # A newer commit supersedes an in-progress release check. Keeping the old
   # run alive only wastes hosted-runner time and can publish stale artifacts.
   cancel-in-progress: true
@@ -921,6 +931,44 @@ jobs:
             exit 1
           fi
 
+      - name: Write complete Cargo cache manifest
+        if: ${{ inputs.cache_audit == true }}
+        shell: bash
+        env:
+          MANIFEST_PATH: ${{ runner.temp }}/cargo-cache-manifest-${{ matrix.target }}-${{ matrix.bundle }}.tsv
+        run: |
+          set -euo pipefail
+          python3 - "$MANIFEST_PATH" <<'PY'
+          import os
+          import pathlib
+          import sys
+
+          output = pathlib.Path(sys.argv[1])
+          roots = [pathlib.Path(os.environ["CARGO_TARGET_DIR"])]
+          cargo_home = os.environ.get("CARGO_HOME")
+          if cargo_home:
+              roots.extend([
+                  pathlib.Path(cargo_home) / "registry" / "cache",
+                  pathlib.Path(cargo_home) / "git",
+              ])
+          with output.open("w", encoding="utf-8") as manifest:
+              for root in roots:
+                  if not root.exists():
+                      continue
+                  for path in sorted(root.rglob("*")):
+                      if path.is_file():
+                          manifest.write(f"{path.stat().st_size}\t{path}\n")
+          PY
+
+      - name: Upload complete Cargo cache manifest
+        if: ${{ inputs.cache_audit == true }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: cargo-cache-manifest-${{ matrix.target }}-${{ matrix.bundle }}
+          path: ${{ runner.temp }}/cargo-cache-manifest-${{ matrix.target }}-${{ matrix.bundle }}.tsv
+          retention-days: 7
+          if-no-files-found: error
+
       - name: Write build summary
         if: always()
         shell: bash
@@ -1174,6 +1222,44 @@ jobs:
             printf '%s\n' "$forbidden_files" >&2
             exit 1
           fi
+
+      - name: Write complete Cargo cache manifest
+        if: ${{ inputs.cache_audit == true }}
+        shell: bash
+        env:
+          MANIFEST_PATH: ${{ runner.temp }}/cargo-cache-manifest-${{ matrix.target }}-${{ matrix.bundle }}.tsv
+        run: |
+          set -euo pipefail
+          python3 - "$MANIFEST_PATH" <<'PY'
+          import os
+          import pathlib
+          import sys
+
+          output = pathlib.Path(sys.argv[1])
+          roots = [pathlib.Path(os.environ["CARGO_TARGET_DIR"])]
+          cargo_home = os.environ.get("CARGO_HOME")
+          if cargo_home:
+              roots.extend([
+                  pathlib.Path(cargo_home) / "registry" / "cache",
+                  pathlib.Path(cargo_home) / "git",
+              ])
+          with output.open("w", encoding="utf-8") as manifest:
+              for root in roots:
+                  if not root.exists():
+                      continue
+                  for path in sorted(root.rglob("*")):
+                      if path.is_file():
+                          manifest.write(f"{path.stat().st_size}\t{path}\n")
+          PY
+
+      - name: Upload complete Cargo cache manifest
+        if: ${{ inputs.cache_audit == true }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: cargo-cache-manifest-${{ matrix.target }}-${{ matrix.bundle }}
+          path: ${{ runner.temp }}/cargo-cache-manifest-${{ matrix.target }}-${{ matrix.bundle }}.tsv
+          retention-days: 7
+          if-no-files-found: error
 
   build-windows-package:
     needs:
