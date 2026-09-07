@@ -739,15 +739,18 @@ jobs:
           # cache key. Build inputs are covered by shared-key below, while
           # rust-cache's environment hash would prevent reuse on Windows.
           add-rust-environment-hash-key: false
-          # Cache entries are immutable and matrix bundles build in parallel,
-          # so include the bundle to prevent the first saver from excluding
-          # the other bundle's workspace artifacts.
-          shared-key: codex-release-v4-${{ matrix.target }}-${{ matrix.bundle }}-${{ inputs.reproducibility_mode || 'off' }}-${{ needs.prepare.outputs.upstream_tag }}-${{ needs.prepare.outputs.patch_hash }}-${{ hashFiles('.github/actions/release-cache-policy', '.github/actions/setup-rusty-v8/action.yml', 'scripts/build-release.sh') }}-${{ steps.rust_compiler.outputs.fingerprint }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
+          # Share one target-level cache across bundles. The target directory
+          # contains reusable Cargo outputs; the bundle only changes packaging.
+          shared-key: codex-release-v4-${{ matrix.target }}-${{ inputs.reproducibility_mode || 'off' }}-${{ needs.prepare.outputs.upstream_tag }}-${{ needs.prepare.outputs.patch_hash }}-${{ hashFiles('.github/actions/release-cache-policy', '.github/actions/setup-rusty-v8/action.yml', 'scripts/build-release.sh') }}-${{ steps.rust_compiler.outputs.fingerprint }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
           # Spend the larger workspace-crate cache on macOS, whose hosted
           # builds are slower than Linux. Linux retains the smaller
           # dependency-oriented cache so the platform caches fit GitHub's
           # repository quota together.
           cache-workspace-crates: ${{ runner.os == 'macOS' }}
+          # Cargo's installed binaries are setup tools, not release outputs;
+          # cache them through their dedicated setup steps instead.
+          cache-bin: false
+          cache-all-crates: false
           save-if: true
           cache-on-failure: true
 
@@ -899,6 +902,13 @@ jobs:
           name: ${{ matrix.artifact_name }}
           path: dist/${{ matrix.target }}/codex-package-${{ matrix.target }}.tar.gz
           if-no-files-found: error
+
+      - name: Remove debug symbols before caching Cargo outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_dir="${CARGO_TARGET_DIR}/${{ matrix.target }}/release"
+          find "$release_dir" -type d -name '*.dSYM' -prune -exec rm -rf {} +
 
       - name: Write build summary
         if: always()
@@ -1075,12 +1085,16 @@ jobs:
           # by the next release without a second bundle-specific cold build.
           # Build-affecting inputs are included explicitly; orchestration-only
           # edits to release-build.yml do not invalidate this cache.
-          shared-key: codex-release-v4-${{ matrix.target }}-${{ matrix.bundle }}-${{ inputs.reproducibility_mode || 'off' }}-${{ needs.prepare.outputs.upstream_tag }}-${{ needs.prepare.outputs.patch_hash }}-${{ hashFiles('.github/actions/release-cache-policy', '.github/actions/setup-rusty-v8/action.yml', 'scripts/build-release.sh') }}-${{ steps.rust_compiler.outputs.fingerprint }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
+          # Share one target-level cache across bundles. The target directory
+          # contains reusable Cargo outputs; the bundle only changes packaging.
+          shared-key: codex-release-v4-${{ matrix.target }}-${{ inputs.reproducibility_mode || 'off' }}-${{ needs.prepare.outputs.upstream_tag }}-${{ needs.prepare.outputs.patch_hash }}-${{ hashFiles('.github/actions/release-cache-policy', '.github/actions/setup-rusty-v8/action.yml', 'scripts/build-release.sh') }}-${{ steps.rust_compiler.outputs.fingerprint }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
           # Windows release jobs are among the slowest hosted builds, so keep
           # workspace crates in their target cache. Linux uses the smaller
           # dependency-oriented cache to keep the slowest platform caches
           # within GitHub's repository quota.
           cache-workspace-crates: true
+          cache-bin: false
+          cache-all-crates: false
           save-if: true
           cache-on-failure: true
 
@@ -1131,6 +1145,13 @@ jobs:
           name: windows-binaries-${{ matrix.target }}-${{ matrix.bundle }}
           path: |
             ${{ env.CARGO_TARGET_DIR }}/${{ matrix.target }}/release/staged-${{ matrix.bundle }}/*
+
+      - name: Remove debug symbols before caching Cargo outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_dir="${CARGO_TARGET_DIR}/${{ matrix.target }}/release"
+          find "$release_dir" -type f -name '*.pdb' -delete
 
   build-windows-package:
     needs:
