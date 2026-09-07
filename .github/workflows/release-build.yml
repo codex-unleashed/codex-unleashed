@@ -645,7 +645,24 @@ jobs:
         with:
           upstream-ref: ${{ needs.prepare.outputs.upstream_tag }}
           expected-upstream-commit: ${{ needs.prepare.outputs.upstream_sha }}
-          apply-patches: false
+          apply-patches: true
+
+      - name: Normalize patched source timestamps
+        shell: bash
+        env:
+          SOURCE_DATE_EPOCH: ${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
+        run: |
+          set -euo pipefail
+          python3 - "$SOURCE_DATE_EPOCH" <<'PY'
+          import os
+          import sys
+
+          timestamp = int(sys.argv[1])
+          for root, directories, files in os.walk("upstream"):
+              directories[:] = [directory for directory in directories if directory != ".git"]
+              for filename in files:
+                  os.utime(os.path.join(root, filename), (timestamp, timestamp))
+          PY
 
       - name: Align upstream checkout with release path
         shell: bash
@@ -774,6 +791,7 @@ jobs:
           set -euo pipefail
           export UPSTREAM_TARGET="${{ matrix.target }}"
           export UPSTREAM_BINARIES="${{ matrix.binaries }}"
+          export PATCHES_ALREADY_APPLIED=1
           export SKIP_UPSTREAM_TESTS=1
           export SKIP_ARTIFACT_COLLECTION=1
           ./scripts/build-release.sh upstream "${RUNNER_TEMP}/upstream-build-output"

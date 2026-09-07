@@ -236,7 +236,11 @@ if [[ ! -f "${target_dir}/pnpm-lock.yaml" || ! -f "${target_dir}/codex-rs/Cargo.
   exit 1
 fi
 
-"${repo_root}/scripts/apply-patches.sh" "${target_dir}"
+if [[ "${PATCHES_ALREADY_APPLIED:-0}" == "1" ]]; then
+  echo "Skipping patch application because PATCHES_ALREADY_APPLIED=1"
+else
+  "${repo_root}/scripts/apply-patches.sh" "${target_dir}"
+fi
 
 pushd "${target_dir}" >/dev/null
 
