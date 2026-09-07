@@ -685,6 +685,18 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Record Rust compiler cache input
+        id: rust_compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          if command -v sha256sum >/dev/null 2>&1; then
+            fingerprint="$(rustc -Vv | sha256sum | awk '{print $1}')"
+          else
+            fingerprint="$(rustc -Vv | shasum -a 256 | awk '{print $1}')"
+          fi
+          echo "fingerprint=${fingerprint}" >> "$GITHUB_OUTPUT"
+
       - name: Cache pnpm store
         id: pnpm_cache
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
@@ -702,15 +714,14 @@ jobs:
             upstream/codex-rs -> target
           # Reuse final release objects and binaries when the source and build
           # inputs are unchanged. Cargo fingerprints still invalidate stale
-          # entries after a source or dependency change.
+          # entries after a source or dependency change. Keep orchestration-only
+          # workflow edits out of this key; build-affecting inputs are hashed
+          # explicitly below.
           cache-targets: true
           # Cache entries are immutable and matrix bundles build in parallel,
           # so include the bundle to prevent the first saver from excluding
           # the other bundle's workspace artifacts.
-          # Bump this namespace when the Cargo invocation changes; otherwise
-          # Cargo may reuse release intermediates produced by a different
-          # invocation and obscure reproducibility comparisons.
-          shared-key: codex-release-v3-${{ matrix.target }}-${{ matrix.bundle }}-${{ inputs.reproducibility_mode || 'off' }}-${{ hashFiles('.github/actions/setup-rusty-v8/action.yml', 'scripts/build-release.sh', '.github/workflows/release-build.yml') }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
+          shared-key: codex-release-v4-${{ matrix.target }}-${{ matrix.bundle }}-${{ inputs.reproducibility_mode || 'off' }}-${{ needs.prepare.outputs.upstream_tag }}-${{ needs.prepare.outputs.patch_hash }}-${{ hashFiles('.github/actions/setup-rusty-v8/action.yml', 'scripts/build-release.sh') }}-${{ steps.rust_compiler.outputs.fingerprint }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
           cache-workspace-crates: true
           save-if: true
           cache-on-failure: true
@@ -989,6 +1000,18 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Record Rust compiler cache input
+        id: rust_compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          if command -v sha256sum >/dev/null 2>&1; then
+            fingerprint="$(rustc -Vv | sha256sum | awk '{print $1}')"
+          else
+            fingerprint="$(rustc -Vv | shasum -a 256 | awk '{print $1}')"
+          fi
+          echo "fingerprint=${fingerprint}" >> "$GITHUB_OUTPUT"
+
       - name: Configure LLVM linker
         uses: ./.github/actions/setup-msvc-env
         with:
@@ -1019,7 +1042,9 @@ jobs:
           # directory and its compiled dependencies are shared by the primary
           # and helper binaries. The target-specific cache can then be reused
           # by the next release without a second bundle-specific cold build.
-          shared-key: codex-release-${{ matrix.target }}-${{ matrix.bundle }}-${{ inputs.reproducibility_mode || 'off' }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
+          # Build-affecting inputs are included explicitly; orchestration-only
+          # edits to release-build.yml do not invalidate this cache.
+          shared-key: codex-release-v4-${{ matrix.target }}-${{ matrix.bundle }}-${{ inputs.reproducibility_mode || 'off' }}-${{ needs.prepare.outputs.upstream_tag }}-${{ needs.prepare.outputs.patch_hash }}-${{ hashFiles('.github/actions/setup-rusty-v8/action.yml', 'scripts/build-release.sh') }}-${{ steps.rust_compiler.outputs.fingerprint }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
           cache-workspace-crates: true
           save-if: true
           cache-on-failure: true
