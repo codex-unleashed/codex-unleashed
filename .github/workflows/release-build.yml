@@ -742,7 +742,7 @@ jobs:
           # Cache entries are immutable and matrix bundles build in parallel,
           # so include the bundle to prevent the first saver from excluding
           # the other bundle's workspace artifacts.
-          shared-key: codex-release-v4-${{ matrix.target }}-${{ matrix.bundle }}-${{ inputs.reproducibility_mode || 'off' }}-${{ needs.prepare.outputs.upstream_tag }}-${{ needs.prepare.outputs.patch_hash }}-${{ hashFiles('.github/actions/setup-rusty-v8/action.yml', 'scripts/build-release.sh') }}-${{ steps.rust_compiler.outputs.fingerprint }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
+          shared-key: codex-release-v4-${{ matrix.target }}-${{ matrix.bundle }}-${{ inputs.reproducibility_mode || 'off' }}-${{ needs.prepare.outputs.upstream_tag }}-${{ needs.prepare.outputs.patch_hash }}-${{ hashFiles('.github/actions/release-cache-policy', '.github/actions/setup-rusty-v8/action.yml', 'scripts/build-release.sh') }}-${{ steps.rust_compiler.outputs.fingerprint }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
           # Keep the cache small enough for all release targets to coexist in
           # GitHub's repository cache. Workspace crates are the source being
           # rebuilt for this release and are much larger than the dependency
@@ -1077,7 +1077,7 @@ jobs:
           # by the next release without a second bundle-specific cold build.
           # Build-affecting inputs are included explicitly; orchestration-only
           # edits to release-build.yml do not invalidate this cache.
-          shared-key: codex-release-v4-${{ matrix.target }}-${{ matrix.bundle }}-${{ inputs.reproducibility_mode || 'off' }}-${{ needs.prepare.outputs.upstream_tag }}-${{ needs.prepare.outputs.patch_hash }}-${{ hashFiles('.github/actions/setup-rusty-v8/action.yml', 'scripts/build-release.sh') }}-${{ steps.rust_compiler.outputs.fingerprint }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
+          shared-key: codex-release-v4-${{ matrix.target }}-${{ matrix.bundle }}-${{ inputs.reproducibility_mode || 'off' }}-${{ needs.prepare.outputs.upstream_tag }}-${{ needs.prepare.outputs.patch_hash }}-${{ hashFiles('.github/actions/release-cache-policy', '.github/actions/setup-rusty-v8/action.yml', 'scripts/build-release.sh') }}-${{ steps.rust_compiler.outputs.fingerprint }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
           # Keep the cache small enough for all release targets to coexist in
           # GitHub's repository cache. Workspace crates are the source being
           # rebuilt for this release and are much larger than the dependency
