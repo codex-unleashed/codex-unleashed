@@ -39,9 +39,9 @@ on:
         default: false
         type: boolean
       ghcr_cache:
-        description: "Use the public GHCR Cargo target overflow cache."
+        description: "Use the public GHCR Cargo target overflow cache. Disable only for cache diagnostics."
         required: false
-        default: false
+        default: true
         type: boolean
   workflow_dispatch:
     inputs:
@@ -87,9 +87,9 @@ on:
         default: false
         type: boolean
       ghcr_cache:
-        description: "Use the public GHCR Cargo target overflow cache."
+        description: "Use the public GHCR Cargo target overflow cache. Disable only for cache diagnostics."
         required: false
-        default: false
+        default: true
         type: boolean
 
 concurrency:

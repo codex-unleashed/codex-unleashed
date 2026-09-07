@@ -15,9 +15,9 @@ on:
         required: false
         type: string
       ghcr_cache:
-        description: "Use the public GHCR Cargo target overflow cache."
+        description: "Use the public GHCR Cargo target overflow cache. Disable only for cache diagnostics."
         required: false
-        default: false
+        default: true
         type: boolean
 
 jobs:
