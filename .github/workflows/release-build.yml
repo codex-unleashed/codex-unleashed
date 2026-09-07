@@ -743,13 +743,11 @@ jobs:
           # so include the bundle to prevent the first saver from excluding
           # the other bundle's workspace artifacts.
           shared-key: codex-release-v4-${{ matrix.target }}-${{ matrix.bundle }}-${{ inputs.reproducibility_mode || 'off' }}-${{ needs.prepare.outputs.upstream_tag }}-${{ needs.prepare.outputs.patch_hash }}-${{ hashFiles('.github/actions/release-cache-policy', '.github/actions/setup-rusty-v8/action.yml', 'scripts/build-release.sh') }}-${{ steps.rust_compiler.outputs.fingerprint }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
-          # Keep the cache small enough for all release targets to coexist in
-          # GitHub's repository cache. Workspace crates are the source being
-          # rebuilt for this release and are much larger than the dependency
-          # artifacts; caching them evicts other platforms' caches under the
-          # repository quota. Dependencies and Cargo fingerprints remain
-          # reusable across identical builds.
-          cache-workspace-crates: false
+          # Spend the larger workspace-crate cache on macOS, whose hosted
+          # builds are slower than Linux. Linux retains the smaller
+          # dependency-oriented cache so the platform caches fit GitHub's
+          # repository quota together.
+          cache-workspace-crates: ${{ runner.os == 'macOS' }}
           save-if: true
           cache-on-failure: true
 
@@ -1078,13 +1076,11 @@ jobs:
           # Build-affecting inputs are included explicitly; orchestration-only
           # edits to release-build.yml do not invalidate this cache.
           shared-key: codex-release-v4-${{ matrix.target }}-${{ matrix.bundle }}-${{ inputs.reproducibility_mode || 'off' }}-${{ needs.prepare.outputs.upstream_tag }}-${{ needs.prepare.outputs.patch_hash }}-${{ hashFiles('.github/actions/release-cache-policy', '.github/actions/setup-rusty-v8/action.yml', 'scripts/build-release.sh') }}-${{ steps.rust_compiler.outputs.fingerprint }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
-          # Keep the cache small enough for all release targets to coexist in
-          # GitHub's repository cache. Workspace crates are the source being
-          # rebuilt for this release and are much larger than the dependency
-          # artifacts; caching them evicts other platforms' caches under the
-          # repository quota. Dependencies and Cargo fingerprints remain
-          # reusable across identical builds.
-          cache-workspace-crates: false
+          # Windows release jobs are among the slowest hosted builds, so keep
+          # workspace crates in their target cache. Linux uses the smaller
+          # dependency-oriented cache to keep the slowest platform caches
+          # within GitHub's repository quota.
+          cache-workspace-crates: true
           save-if: true
           cache-on-failure: true
 
