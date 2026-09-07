@@ -95,6 +95,11 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Configure rusty_v8 artifacts
+        uses: ./.github/actions/setup-rusty-v8
+        with:
+          target: x86_64-unknown-linux-gnu
+
       - name: Install Linux build dependencies
         shell: bash
         run: |
@@ -104,12 +109,8 @@ jobs:
 
       - name: Build patched codex binary for SDK tests
         shell: bash
-        env:
-          V8_FROM_SOURCE: "1"
         run: |
           set -euo pipefail
-          # The supported upstream tag has a stale Cargo.lock; let Cargo
-          # refresh the temporary CI checkout before building its binaries.
           cargo build --manifest-path upstream/codex-rs/Cargo.toml --release \
             --package codex-cli \
             --package codex-code-mode-host
