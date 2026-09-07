@@ -767,6 +767,15 @@ jobs:
           export SKIP_ARTIFACT_COLLECTION=1
           ./scripts/build-release.sh upstream "${RUNNER_TEMP}/upstream-build-output"
 
+      - name: Restore generated Cargo metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Cargo may refresh the upstream lockfile when building an older
+          # release with a newer toolchain. It is build-time state, not a
+          # repository patch, so restore it before the source audit.
+          git -C upstream checkout -- codex-rs/Cargo.lock
+
       - name: Record source provenance
         shell: bash
         env:
