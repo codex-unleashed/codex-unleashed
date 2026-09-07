@@ -763,6 +763,33 @@ jobs:
           export SKIP_ARTIFACT_COLLECTION=1
           ./scripts/build-release.sh upstream "${RUNNER_TEMP}/upstream-build-output"
 
+      - name: Strip Linux release binaries
+        if: ${{ contains(matrix.target, 'linux-musl') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_dir="${CARGO_TARGET_DIR}/${{ matrix.target }}/release"
+          symbols_dir="${RUNNER_TEMP}/codex-symbols-${{ matrix.target }}-${{ matrix.bundle }}"
+          mkdir -p "${symbols_dir}"
+          for binary in ${{ matrix.binaries }}; do
+            # build-release.sh strips bwrap before calculating its embedded
+            # digest. The other binaries must be stripped before packaging,
+            # matching upstream's release workflow. Keep a temporary debug
+            # file so the packaged binary has the same GNU debug link section
+            # as upstream, without publishing the symbols archive.
+            if [[ "${binary}" == "bwrap" ]]; then
+              continue
+            fi
+            binary_path="${release_dir}/${binary}"
+            if [[ ! -f "${binary_path}" ]]; then
+              echo "Binary ${binary_path} not found" >&2
+              exit 1
+            fi
+            objcopy --only-keep-debug "${binary_path}" "${symbols_dir}/${binary}.debug"
+            strip --strip-debug --strip-unneeded "${binary_path}"
+            objcopy --add-gnu-debuglink="${symbols_dir}/${binary}.debug" "${binary_path}"
+          done
+
       - name: Restore generated Cargo metadata
         shell: bash
         run: |
