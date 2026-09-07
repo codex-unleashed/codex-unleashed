@@ -316,9 +316,6 @@ jobs:
             x86_64-pc-windows-msvc \
             aarch64-pc-windows-msvc; do
             bundles="primary app-server"
-            if [[ "${target}" == *windows* ]]; then
-              bundles+=" helpers"
-            fi
             for bundle in ${bundles}; do
               if [[ -n "${INPUT_FOCUS_TARGET}" && "${INPUT_FOCUS_TARGET}" != "${target}" ]]; then
                 continue
@@ -393,10 +390,8 @@ jobs:
             {"runner":"macos-15","target":"aarch64-apple-darwin","bundle":"primary","timeout_minutes":180,"artifact_name":"aarch64-apple-darwin","binaries":"codex codex-code-mode-host codex-responses-api-proxy"}
           ]'
           windows_matrix='[
-            {"target":"x86_64-pc-windows-msvc","bundle":"primary","timeout_minutes":180,"binaries":"codex codex-code-mode-host codex-responses-api-proxy"},
-            {"target":"aarch64-pc-windows-msvc","bundle":"primary","timeout_minutes":180,"binaries":"codex codex-code-mode-host codex-responses-api-proxy"},
-            {"target":"x86_64-pc-windows-msvc","bundle":"helpers","binaries":"codex-windows-sandbox-setup codex-command-runner"},
-            {"target":"aarch64-pc-windows-msvc","bundle":"helpers","binaries":"codex-windows-sandbox-setup codex-command-runner"}
+            {"target":"x86_64-pc-windows-msvc","bundle":"primary","timeout_minutes":180,"binaries":"codex codex-code-mode-host codex-responses-api-proxy codex-windows-sandbox-setup codex-command-runner"},
+            {"target":"aarch64-pc-windows-msvc","bundle":"primary","timeout_minutes":180,"binaries":"codex codex-code-mode-host codex-responses-api-proxy codex-windows-sandbox-setup codex-command-runner"}
           ]'
           filter_matrix() {
             jq -c --arg target "$FOCUS_TARGET" --arg bundle "$FOCUS_BUNDLE" \
@@ -982,9 +977,10 @@ jobs:
           # Cache the complete target tree so unchanged release binaries do
           # not need to be linked again on the next run.
           cache-targets: true
-          # Cache entries are immutable and matrix bundles build in parallel,
-          # so include the bundle to prevent the first saver from excluding
-          # the other bundle's workspace artifacts.
+          # Build all Windows binaries for a target in one job so the target
+          # directory and its compiled dependencies are shared by the primary
+          # and helper binaries. The target-specific cache can then be reused
+          # by the next release without a second bundle-specific cold build.
           shared-key: codex-release-${{ matrix.target }}-${{ matrix.bundle }}-${{ inputs.reproducibility_mode || 'off' }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
           cache-workspace-crates: true
           save-if: true
@@ -1079,12 +1075,6 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: windows-binaries-${{ matrix.target }}-primary
-          path: ${{ env.CARGO_TARGET_DIR }}/${{ matrix.target }}/release
-
-      - name: Download prebuilt Windows helper binaries
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: windows-binaries-${{ matrix.target }}-helpers
           path: ${{ env.CARGO_TARGET_DIR }}/${{ matrix.target }}/release
 
       - name: Stage artifacts
