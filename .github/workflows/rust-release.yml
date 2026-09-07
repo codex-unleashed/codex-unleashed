@@ -14,6 +14,11 @@ on:
         description: "Optional vendor build number. Defaults to the workflow run number."
         required: false
         type: string
+      ghcr_cache:
+        description: "Use the public GHCR Cargo target overflow cache."
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   resolve:
@@ -44,4 +49,5 @@ jobs:
     with:
       upstream_tag: ${{ needs.resolve.outputs.upstream_tag }}
       build_number: ${{ inputs.build_number || '' }}
+      ghcr_cache: ${{ inputs.ghcr_cache || false }}
     secrets: inherit

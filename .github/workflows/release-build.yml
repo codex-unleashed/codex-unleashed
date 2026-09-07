@@ -38,6 +38,11 @@ on:
         required: false
         default: false
         type: boolean
+      ghcr_cache:
+        description: "Use the public GHCR Cargo target overflow cache."
+        required: false
+        default: false
+        type: boolean
   workflow_dispatch:
     inputs:
       upstream_tag:
@@ -81,6 +86,11 @@ on:
         required: false
         default: false
         type: boolean
+      ghcr_cache:
+        description: "Use the public GHCR Cargo target overflow cache."
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: >-
@@ -88,7 +98,7 @@ concurrency:
       inputs.focus_target || 'all-targets'
     }}-${{ inputs.focus_bundle || 'all-bundles' }}-${{
       inputs.reproducibility_mode || 'off'
-    }}-${{ inputs.cache_audit || 'false' }}
+    }}-${{ inputs.cache_audit || 'false' }}-${{ inputs.ghcr_cache || 'false' }}
   # A newer commit supersedes an in-progress release check. Keeping the old
   # run alive only wastes hosted-runner time and can publish stale artifacts.
   cancel-in-progress: true
@@ -536,6 +546,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      packages: write
     env:
       CODEX_UNLEASHED_BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
       CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO: ${{ contains(matrix.target, 'apple-darwin') && 'packed' || 'off' }}
@@ -764,6 +775,38 @@ jobs:
           save-if: true
           cache-on-failure: true
 
+      - name: Set up ORAS for GHCR Cargo cache
+        if: ${{ inputs.ghcr_cache == true }}
+        uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
+
+      - name: Log in to GHCR Cargo cache
+        if: ${{ inputs.ghcr_cache == true }}
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GHCR_TOKEN" | oras login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
+
+      - name: Restore GHCR Cargo target cache
+        id: ghcr_cargo_cache
+        if: ${{ inputs.ghcr_cache == true && steps.cargo_cache.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        shell: bash
+        env:
+          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache
+          GHCR_CACHE_TAG: cargo-${{ matrix.target }}-${{ needs.prepare.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          if bash .github/scripts/ghcr-cargo-target-cache.sh pull \
+            "$GHCR_CACHE_REPOSITORY" \
+            "$GHCR_CACHE_TAG" \
+            "$CARGO_TARGET_DIR" \
+            "${{ needs.prepare.outputs.upstream_tag }}"; then
+            echo "restored=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No usable GHCR Cargo target cache was found; continuing with Cargo's normal build." >&2
+            echo "restored=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Cache rusty_v8 artifacts
         id: rusty_v8_cache
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
@@ -969,6 +1012,36 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+      - name: Populate GHCR Cargo target overflow cache
+        if: ${{ inputs.ghcr_cache == true && steps.cargo_cache.outputs.cache-hit != 'true' && steps.ghcr_cargo_cache.outputs.restored != 'true' }}
+        continue-on-error: true
+        shell: bash
+        env:
+          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache
+          GHCR_CACHE_TAG: cargo-${{ matrix.target }}-${{ needs.prepare.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          bash .github/scripts/ghcr-cargo-target-cache.sh push \
+            "$GHCR_CACHE_REPOSITORY" \
+            "$GHCR_CACHE_TAG" \
+            "$CARGO_TARGET_DIR" \
+            "${{ needs.prepare.outputs.upstream_tag }}"
+
+      - name: Prune old GHCR Cargo cache tags
+        if: ${{ inputs.ghcr_cache == true }}
+        continue-on-error: true
+        shell: bash
+        env:
+          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache
+          GHCR_CACHE_TAG: cargo-${{ matrix.target }}-${{ needs.prepare.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          bash .github/scripts/ghcr-cargo-target-cache.sh prune \
+            "$GHCR_CACHE_REPOSITORY" \
+            "$GHCR_CACHE_TAG" \
+            "$CARGO_TARGET_DIR" \
+            "${{ needs.prepare.outputs.upstream_tag }}"
+
       - name: Write build summary
         if: always()
         shell: bash
@@ -1025,6 +1098,9 @@ jobs:
     name: Build Windows binaries - ${{ matrix.target }} - ${{ matrix.bundle }}
     runs-on: windows-latest
     timeout-minutes: ${{ matrix.timeout_minutes || 180 }}
+    permissions:
+      contents: read
+      packages: write
     env:
       CODEX_UNLEASHED_BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
       SOURCE_DATE_EPOCH: ${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
@@ -1157,6 +1233,38 @@ jobs:
           save-if: true
           cache-on-failure: true
 
+      - name: Set up ORAS for GHCR Cargo cache
+        if: ${{ inputs.ghcr_cache == true }}
+        uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
+
+      - name: Log in to GHCR Cargo cache
+        if: ${{ inputs.ghcr_cache == true }}
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GHCR_TOKEN" | oras login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
+
+      - name: Restore GHCR Cargo target cache
+        id: ghcr_cargo_cache
+        if: ${{ inputs.ghcr_cache == true && steps.cargo_cache.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        shell: bash
+        env:
+          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache
+          GHCR_CACHE_TAG: cargo-${{ matrix.target }}-${{ needs.prepare.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          if bash .github/scripts/ghcr-cargo-target-cache.sh pull \
+            "$GHCR_CACHE_REPOSITORY" \
+            "$GHCR_CACHE_TAG" \
+            "$CARGO_TARGET_DIR" \
+            "${{ needs.prepare.outputs.upstream_tag }}"; then
+            echo "restored=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No usable GHCR Cargo target cache was found; continuing with Cargo's normal build." >&2
+            echo "restored=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Cargo build (Windows binaries)
         working-directory: upstream/codex-rs
         shell: bash
@@ -1260,6 +1368,36 @@ jobs:
           path: ${{ runner.temp }}/cargo-cache-manifest-${{ matrix.target }}-${{ matrix.bundle }}.tsv
           retention-days: 7
           if-no-files-found: error
+
+      - name: Populate GHCR Cargo target overflow cache
+        if: ${{ inputs.ghcr_cache == true && steps.cargo_cache.outputs.cache-hit != 'true' && steps.ghcr_cargo_cache.outputs.restored != 'true' }}
+        continue-on-error: true
+        shell: bash
+        env:
+          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache
+          GHCR_CACHE_TAG: cargo-${{ matrix.target }}-${{ needs.prepare.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          bash .github/scripts/ghcr-cargo-target-cache.sh push \
+            "$GHCR_CACHE_REPOSITORY" \
+            "$GHCR_CACHE_TAG" \
+            "$CARGO_TARGET_DIR" \
+            "${{ needs.prepare.outputs.upstream_tag }}"
+
+      - name: Prune old GHCR Cargo cache tags
+        if: ${{ inputs.ghcr_cache == true }}
+        continue-on-error: true
+        shell: bash
+        env:
+          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache
+          GHCR_CACHE_TAG: cargo-${{ matrix.target }}-${{ needs.prepare.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          bash .github/scripts/ghcr-cargo-target-cache.sh prune \
+            "$GHCR_CACHE_REPOSITORY" \
+            "$GHCR_CACHE_TAG" \
+            "$CARGO_TARGET_DIR" \
+            "${{ needs.prepare.outputs.upstream_tag }}"
 
   build-windows-package:
     needs:
