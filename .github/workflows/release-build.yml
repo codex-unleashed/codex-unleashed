@@ -1039,12 +1039,14 @@ jobs:
         with:
           workspaces: |
             upstream/codex-rs -> target
-          # Cache the complete target tree so unchanged release binaries do
-          # not need to be linked again on the next run.
-          cache-targets: true
           # Keep the cache key stable across hosted Windows runners. The
           # explicit shared-key already covers all build-affecting inputs.
           add-rust-environment-hash-key: false
+          # setup-ci directs Cargo to the shared Dev Drive target directory;
+          # cache that actual directory rather than the checkout-local target
+          # path named by the workspace shorthand above.
+          cache-directories: ${{ env.CARGO_TARGET_DIR }}
+          cache-targets: false
           # Build all Windows binaries for a target in one job so the target
           # directory and its compiled dependencies are shared by the primary
           # and helper binaries. The target-specific cache can then be reused
