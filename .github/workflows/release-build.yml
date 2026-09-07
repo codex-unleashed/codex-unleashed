@@ -1038,6 +1038,7 @@ jobs:
         always() &&
         !cancelled() &&
         needs.prepare.outputs.should_release == 'true' &&
+        (inputs.verification_level == '' || inputs.verification_level == 'full') &&
         inputs.focus_target == '' && inputs.focus_bundle == ''
       }}
     name: Build - windows-latest - ${{ matrix.target }}
@@ -1128,6 +1129,7 @@ jobs:
         always() &&
         !cancelled() &&
         needs.prepare.outputs.should_release == 'true' &&
+        (inputs.verification_level == '' || inputs.verification_level == 'full') &&
         inputs.focus_target == '' && inputs.focus_bundle == '' &&
         (
           needs.prepare.outputs.artifact_run_id != github.run_id ||
