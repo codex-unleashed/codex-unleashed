@@ -903,12 +903,23 @@ jobs:
           path: dist/${{ matrix.target }}/codex-package-${{ matrix.target }}.tar.gz
           if-no-files-found: error
 
-      - name: Remove debug symbols before caching Cargo outputs
+      - name: Prune and audit Cargo cache contents
         shell: bash
         run: |
           set -euo pipefail
           release_dir="${CARGO_TARGET_DIR}/${{ matrix.target }}/release"
           find "$release_dir" -type d -name '*.dSYM' -prune -exec rm -rf {} +
+          find "$CARGO_TARGET_DIR" -type d -name cargo-timings -prune -exec rm -rf {} +
+          find "$CARGO_TARGET_DIR" -type d -name 'staged-*' -prune -exec rm -rf {} +
+
+          echo "Largest Cargo cache directories:"
+          du -sh "$CARGO_TARGET_DIR"/* 2>/dev/null | sort -h | tail -20 || true
+          forbidden_files="$(find "$CARGO_TARGET_DIR" -type f \( -name '*.dSYM' -o -name '*.pdb' -o -path '*/cargo-timings/*' -o -path '*/staged-*/*' \) -print)"
+          if [[ -n "$forbidden_files" ]]; then
+            echo "Unwanted files remain in the Cargo cache:" >&2
+            printf '%s\n' "$forbidden_files" >&2
+            exit 1
+          fi
 
       - name: Write build summary
         if: always()
@@ -1146,12 +1157,23 @@ jobs:
           path: |
             ${{ env.CARGO_TARGET_DIR }}/${{ matrix.target }}/release/staged-${{ matrix.bundle }}/*
 
-      - name: Remove debug symbols before caching Cargo outputs
+      - name: Prune and audit Cargo cache contents
         shell: bash
         run: |
           set -euo pipefail
           release_dir="${CARGO_TARGET_DIR}/${{ matrix.target }}/release"
           find "$release_dir" -type f -name '*.pdb' -delete
+          find "$CARGO_TARGET_DIR" -type d -name cargo-timings -prune -exec rm -rf {} +
+          find "$CARGO_TARGET_DIR" -type d -name 'staged-*' -prune -exec rm -rf {} +
+
+          echo "Largest Cargo cache directories:"
+          du -sh "$CARGO_TARGET_DIR"/* 2>/dev/null | sort -h | tail -20 || true
+          forbidden_files="$(find "$CARGO_TARGET_DIR" -type f \( -name '*.dSYM' -o -name '*.pdb' -o -path '*/cargo-timings/*' -o -path '*/staged-*/*' \) -print)"
+          if [[ -n "$forbidden_files" ]]; then
+            echo "Unwanted files remain in the Cargo cache:" >&2
+            printf '%s\n' "$forbidden_files" >&2
+            exit 1
+          fi
 
   build-windows-package:
     needs:
