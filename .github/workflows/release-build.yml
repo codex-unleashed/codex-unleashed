@@ -718,6 +718,10 @@ jobs:
           # workflow edits out of this key; build-affecting inputs are hashed
           # explicitly below.
           cache-targets: true
+          # Do not include runner- and run-specific environment paths in the
+          # cache key. Build inputs are covered by shared-key below, while
+          # rust-cache's environment hash would prevent reuse on Windows.
+          add-rust-environment-hash-key: false
           # Cache entries are immutable and matrix bundles build in parallel,
           # so include the bundle to prevent the first saver from excluding
           # the other bundle's workspace artifacts.
@@ -1038,6 +1042,9 @@ jobs:
           # Cache the complete target tree so unchanged release binaries do
           # not need to be linked again on the next run.
           cache-targets: true
+          # Keep the cache key stable across hosted Windows runners. The
+          # explicit shared-key already covers all build-affecting inputs.
+          add-rust-environment-hash-key: false
           # Build all Windows binaries for a target in one job so the target
           # directory and its compiled dependencies are shared by the primary
           # and helper binaries. The target-specific cache can then be reused
