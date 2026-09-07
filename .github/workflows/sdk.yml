@@ -104,6 +104,8 @@ jobs:
 
       - name: Build patched codex binary for SDK tests
         shell: bash
+        env:
+          V8_FROM_SOURCE: "1"
         run: |
           set -euo pipefail
           # The supported upstream tag has a stale Cargo.lock; let Cargo
