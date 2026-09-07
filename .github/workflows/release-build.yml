@@ -744,18 +744,16 @@ jobs:
           restore-keys: |
             pnpm-${{ runner.os }}-
 
-      - name: Cache Cargo artifacts
+      - name: Cache Cargo dependencies
         id: cargo_cache
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
             upstream/codex-rs -> target
-          # Reuse final release objects and binaries when the source and build
-          # inputs are unchanged. Cargo fingerprints still invalidate stale
-          # entries after a source or dependency change. Keep orchestration-only
-          # workflow edits out of this key; build-affecting inputs are hashed
-          # explicitly below.
-          cache-targets: true
+          # Cargo target directories belong exclusively to the GHCR overflow
+          # cache below. Keep only registry, Git, and other dependency data in
+          # the GitHub Actions cache.
+          cache-targets: false
           # Do not include runner- and run-specific environment paths in the
           # cache key. Build inputs are covered by shared-key below, while
           # rust-cache's environment hash would prevent reuse on Windows.
@@ -763,11 +761,7 @@ jobs:
           # Share one target-level cache across bundles. The target directory
           # contains reusable Cargo outputs; the bundle only changes packaging.
           shared-key: codex-release-v4-${{ matrix.target }}-${{ inputs.reproducibility_mode || 'off' }}-${{ needs.prepare.outputs.upstream_tag }}-${{ needs.prepare.outputs.patch_hash }}-${{ hashFiles('.github/actions/release-cache-policy', '.github/actions/setup-rusty-v8/action.yml', 'scripts/build-release.sh') }}-${{ steps.rust_compiler.outputs.fingerprint }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
-          # Spend the larger workspace-crate cache on macOS, whose hosted
-          # builds are slower than Linux. Linux retains the smaller
-          # dependency-oriented cache so the platform caches fit GitHub's
-          # repository quota together.
-          cache-workspace-crates: ${{ runner.os == 'macOS' }}
+          cache-workspace-crates: false
           # Cargo's installed binaries are setup tools, not release outputs;
           # cache them through their dedicated setup steps instead.
           cache-bin: false
@@ -788,7 +782,7 @@ jobs:
 
       - name: Restore GHCR Cargo target cache
         id: ghcr_cargo_cache
-        if: ${{ inputs.ghcr_cache == true && steps.cargo_cache.outputs.cache-hit != 'true' }}
+        if: ${{ inputs.ghcr_cache == true }}
         continue-on-error: true
         shell: bash
         env:
@@ -1013,7 +1007,7 @@ jobs:
           if-no-files-found: error
 
       - name: Populate GHCR Cargo target overflow cache
-        if: ${{ inputs.ghcr_cache == true && steps.cargo_cache.outputs.cache-hit != 'true' && steps.ghcr_cargo_cache.outputs.restored != 'true' }}
+        if: ${{ inputs.ghcr_cache == true && steps.ghcr_cargo_cache.outputs.restored != 'true' }}
         continue-on-error: true
         shell: bash
         env:
@@ -1200,7 +1194,7 @@ jobs:
         with:
           target: ${{ matrix.target }}
 
-      - name: Cache Cargo artifacts
+      - name: Cache Cargo dependencies
         id: cargo_cache
         uses: Swatinem/rust-cache@v2
         with:
@@ -1209,25 +1203,15 @@ jobs:
           # Keep the cache key stable across hosted Windows runners. The
           # explicit shared-key already covers all build-affecting inputs.
           add-rust-environment-hash-key: false
-          # setup-ci directs Cargo to the shared Dev Drive target directory;
-          # cache that actual directory rather than the checkout-local target
-          # path named by the workspace shorthand above.
-          cache-directories: ${{ env.CARGO_TARGET_DIR }}
+          # Cargo target directories belong exclusively to the GHCR overflow
+          # cache below. Do not list CARGO_TARGET_DIR as an additional cache
+          # directory, or the two backends would own the same outputs.
           cache-targets: false
           # Build all Windows binaries for a target in one job so the target
           # directory and its compiled dependencies are shared by the primary
-          # and helper binaries. The target-specific cache can then be reused
-          # by the next release without a second bundle-specific cold build.
-          # Build-affecting inputs are included explicitly; orchestration-only
-          # edits to release-build.yml do not invalidate this cache.
-          # Share one target-level cache across bundles. The target directory
-          # contains reusable Cargo outputs; the bundle only changes packaging.
+          # and helper binaries before the directory is uploaded to GHCR.
           shared-key: codex-release-v4-${{ matrix.target }}-${{ inputs.reproducibility_mode || 'off' }}-${{ needs.prepare.outputs.upstream_tag }}-${{ needs.prepare.outputs.patch_hash }}-${{ hashFiles('.github/actions/release-cache-policy', '.github/actions/setup-rusty-v8/action.yml', 'scripts/build-release.sh') }}-${{ steps.rust_compiler.outputs.fingerprint }}-${{ fromJSON(needs.prepare.outputs.build_metadata)[format('{0}|{1}', matrix.target, matrix.bundle)].source_date_epoch }}
-          # Windows release jobs are among the slowest hosted builds, so keep
-          # workspace crates in their target cache. Linux uses the smaller
-          # dependency-oriented cache to keep the slowest platform caches
-          # within GitHub's repository quota.
-          cache-workspace-crates: true
+          cache-workspace-crates: false
           cache-bin: false
           cache-all-crates: false
           save-if: true
@@ -1246,7 +1230,7 @@ jobs:
 
       - name: Restore GHCR Cargo target cache
         id: ghcr_cargo_cache
-        if: ${{ inputs.ghcr_cache == true && steps.cargo_cache.outputs.cache-hit != 'true' }}
+        if: ${{ inputs.ghcr_cache == true }}
         continue-on-error: true
         shell: bash
         env:
@@ -1370,7 +1354,7 @@ jobs:
           if-no-files-found: error
 
       - name: Populate GHCR Cargo target overflow cache
-        if: ${{ inputs.ghcr_cache == true && steps.cargo_cache.outputs.cache-hit != 'true' && steps.ghcr_cargo_cache.outputs.restored != 'true' }}
+        if: ${{ inputs.ghcr_cache == true && steps.ghcr_cargo_cache.outputs.restored != 'true' }}
         continue-on-error: true
         shell: bash
         env:
