@@ -1215,7 +1215,8 @@ jobs:
             patch_list="- None"
           else
             for patch_file in ${patch_files}; do
-              patch_list+="- \`${patch_file}\`"$'\n'
+              patch_url="https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/${patch_file}"
+              patch_list+="- [\`${patch_file}\`](${patch_url})"$'\n'
             done
             patch_list="${patch_list%$'\n'}"
           fi
