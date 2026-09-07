@@ -513,6 +513,7 @@ jobs:
         always() &&
         !cancelled() &&
         needs.prepare.outputs.should_release == 'true' &&
+        needs.prepare.outputs.artifact_run_id == github.run_id &&
         (
           inputs.focus_target == '' ||
           contains(inputs.focus_target, 'linux') ||
@@ -876,6 +877,7 @@ jobs:
         always() &&
         !cancelled() &&
         needs.prepare.outputs.should_release == 'true' &&
+        needs.prepare.outputs.artifact_run_id == github.run_id &&
         (inputs.focus_target == '' || contains(inputs.focus_target, 'windows'))
       }}
     name: Build Windows binaries - ${{ matrix.target }} - ${{ matrix.bundle }}
@@ -1043,6 +1045,7 @@ jobs:
         always() &&
         !cancelled() &&
         needs.prepare.outputs.should_release == 'true' &&
+        needs.prepare.outputs.artifact_run_id == github.run_id &&
         (inputs.verification_level == '' || inputs.verification_level == 'full') &&
         inputs.focus_target == '' && inputs.focus_bundle == ''
       }}
@@ -1187,6 +1190,7 @@ jobs:
       - name: Verify upstream asset contract
         env:
           UPSTREAM_TAG: ${{ needs.prepare.outputs.upstream_tag }}
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
