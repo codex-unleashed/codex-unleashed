@@ -788,6 +788,7 @@ jobs:
         env:
           GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache
           GHCR_CACHE_TAG: cargo-${{ matrix.target }}-${{ needs.prepare.outputs.upstream_tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           if bash .github/scripts/ghcr-cargo-target-cache.sh pull \
@@ -1013,6 +1014,7 @@ jobs:
         env:
           GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache
           GHCR_CACHE_TAG: cargo-${{ matrix.target }}-${{ needs.prepare.outputs.upstream_tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           bash .github/scripts/ghcr-cargo-target-cache.sh push \
@@ -1028,6 +1030,7 @@ jobs:
         env:
           GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache
           GHCR_CACHE_TAG: cargo-${{ matrix.target }}-${{ needs.prepare.outputs.upstream_tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           bash .github/scripts/ghcr-cargo-target-cache.sh prune \
@@ -1236,6 +1239,7 @@ jobs:
         env:
           GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache
           GHCR_CACHE_TAG: cargo-${{ matrix.target }}-${{ needs.prepare.outputs.upstream_tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           if bash .github/scripts/ghcr-cargo-target-cache.sh pull \

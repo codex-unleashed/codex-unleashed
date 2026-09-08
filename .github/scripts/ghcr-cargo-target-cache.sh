@@ -20,12 +20,33 @@ prune_old_tags() {
   # The cache repository is dedicated to Cargo targets. Keep only entries
   # for the current upstream release; old upstream versions are no longer
   # useful because every target cache key includes the upstream tag.
-  while IFS= read -r existing_tag; do
-    [[ -n "$existing_tag" ]] || continue
-    [[ "$existing_tag" == cargo-* ]] || continue
-    [[ "$existing_tag" == *"-${upstream_tag}" ]] && continue
-    oras manifest delete "${repository}:${existing_tag}" --force
-  done < <(oras repo tags "$repository")
+  # GHCR does not implement the OCI manifest-delete operation. Delete the
+  # corresponding GitHub Packages version instead; this removes its tags and
+  # works for private as well as public cache packages.
+  command -v gh >/dev/null || {
+    echo "GitHub CLI is required to prune GHCR package versions" >&2
+    return 1
+  }
+  repository_path="${repository#ghcr.io/}"
+  package_owner="${repository_path%%/*}"
+  package_name="${repository_path#*/}"
+  package_endpoint="${GITHUB_API_URL:-https://api.github.com}/orgs/${package_owner}/packages/container/${package_name}/versions"
+
+  stale_version_ids="$(gh api --paginate "$package_endpoint" --jq '
+    .[]
+    | .id as $id
+    | (.metadata.container.tags // [])[]?
+    | [$id, .]
+    | @tsv
+  ' | awk -v upstream_tag="$upstream_tag" '
+    $2 ~ /^cargo-/ && $2 !~ ("-" upstream_tag "$") { print $1 }
+  ' | sort -u)"
+
+  while IFS= read -r version_id; do
+    [[ -n "$version_id" ]] || continue
+    echo "Deleting stale GHCR package version ${version_id}"
+    gh api --method DELETE "${package_endpoint}/${version_id}"
+  done <<< "$stale_version_ids"
 }
 
 case "$operation" in
