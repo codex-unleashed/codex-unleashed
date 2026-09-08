@@ -148,7 +148,7 @@ jobs:
           set -euo pipefail
           # The first SDK test starts a freshly compiled binary and can exceed
           # Jest's five-second per-test default on a cold GitHub runner.
-          pnpm --dir upstream/sdk/typescript run test -- --testTimeout=30000
+          pnpm --dir upstream/sdk/typescript exec jest --testTimeout=30000
 
       - name: Check for a clean worktree
         if: always() && !cancelled()
