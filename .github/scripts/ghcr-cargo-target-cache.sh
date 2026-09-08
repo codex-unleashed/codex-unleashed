@@ -54,7 +54,10 @@ prune_old_tags() {
         # A package version may carry several tags when two pushes have the
         # same manifest. Never delete such a version if it also carries a
         # current-release tag; deleting a package version deletes all its tags.
-        if (has_cargo && !has_current) print $1
+        # Oras can leave an untagged package version behind when a tag is
+        # moved to a newer manifest. This cache repository has no useful
+        # untagged content, so remove those orphaned versions as well.
+        if (($2 == "") || (has_cargo && !has_current)) print $1
       }
     ' | sort -u
   )"
