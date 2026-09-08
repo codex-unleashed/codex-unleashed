@@ -40,6 +40,7 @@ jobs:
           printf '%s\n' 'cache-prune-test' > "$marker"
           echo "Moving $current_tag to a distinct marker manifest"
           oras push "$repository:$current_tag" \
+            --disable-path-validation \
             --artifact-type application/vnd.codex-unleashed.cargo-target.v1 \
             "$marker:application/octet-stream"
           echo "Tags before pruning:"
