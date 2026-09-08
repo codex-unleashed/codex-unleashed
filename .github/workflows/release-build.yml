@@ -862,6 +862,13 @@ jobs:
           export PATCHES_ALREADY_APPLIED=1
           export SKIP_UPSTREAM_TESTS=1
           export SKIP_ARTIFACT_COLLECTION=1
+          if [[ "${{ inputs.cache_audit }}" == "true" ]]; then
+            # Cargo normally reports only that a crate is being compiled. In
+            # cache-audit runs, expose fingerprint decisions so a restored
+            # target cache can be distinguished from a cache that Cargo
+            # rejected because one of its inputs changed.
+            export CARGO_LOG="cargo::core::compiler::fingerprint=info"
+          fi
           ./scripts/build-release.sh upstream "${RUNNER_TEMP}/upstream-build-output"
 
       - name: Strip Unix release binaries
