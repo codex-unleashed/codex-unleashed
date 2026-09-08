@@ -2,12 +2,6 @@ name: Test GHCR cache pruning
 
 on:
   workflow_dispatch:
-    inputs:
-      cleanup_contaminated_version:
-        description: "Remove the deliberately contaminated cache version before testing"
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
@@ -29,7 +23,6 @@ jobs:
         run: echo "$GHCR_TOKEN" | oras login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
 
       - name: Seed and prune a stale upstream-version tag
-        if: ${{ inputs.cleanup_contaminated_version != true }}
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -43,8 +36,12 @@ jobs:
           }
           stale_tag="${current_tag%-rust-v0.153.4}-rust-v0.153.3"
 
-          echo "Copying $current_tag to stale test tag $stale_tag"
-          oras cp "$repository:$current_tag" "$repository:$stale_tag"
+          marker="$RUNNER_TEMP/cache-prune-marker"
+          printf '%s\n' 'cache-prune-test' > "$marker"
+          echo "Moving $current_tag to a distinct marker manifest"
+          oras push "$repository:$current_tag" \
+            --artifact-type application/vnd.codex-unleashed.cargo-target.v1 \
+            "$marker:application/octet-stream"
           echo "Tags before pruning:"
           oras repo tags "$repository"
 
@@ -62,12 +59,3 @@ jobs:
             exit 1
           fi
           grep -Fxq "$current_tag" <<<"$tags_after"
-
-      - name: Remove contaminated test version
-        if: ${{ inputs.cleanup_contaminated_version == true }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          endpoint="https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/codex-unleashed-cargo-cache/versions/1221283604"
-          gh api --method DELETE "$endpoint"
