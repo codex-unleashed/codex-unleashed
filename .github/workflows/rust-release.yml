@@ -45,7 +45,7 @@ jobs:
 
   release:
     needs: resolve
-    uses: ./.github/workflows/release-build.yml
+    uses: ./.github/workflows/build-release.yml
     with:
       upstream_tag: ${{ needs.resolve.outputs.upstream_tag }}
       build_number: ${{ inputs.build_number || '' }}

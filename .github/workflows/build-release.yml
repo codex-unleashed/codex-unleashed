@@ -94,7 +94,7 @@ on:
 
 concurrency:
   group: >-
-    release-build-${{ github.ref }}-${{ inputs.upstream_tag || 'latest' }}-${{ inputs.verification_level || 'full' }}-${{
+    build-release-${{ github.ref }}-${{ inputs.upstream_tag || 'latest' }}-${{ inputs.verification_level || 'full' }}-${{
       inputs.focus_target || 'all-targets'
     }}-${{ inputs.focus_bundle || 'all-bundles' }}-${{
       inputs.reproducibility_mode || 'off'
@@ -920,7 +920,7 @@ jobs:
         shell: bash
         env:
           UPSTREAM_REF: ${{ needs.prepare.outputs.upstream_tag }}
-          WORKFLOW_PATH: .github/workflows/release-build.yml
+          WORKFLOW_PATH: .github/workflows/build-release.yml
           WORKFLOW_SHA: ${{ github.sha }}
           WORKFLOW_RUN_ID: ${{ github.run_id }}
         run: |
@@ -1146,7 +1146,7 @@ jobs:
         shell: bash
         env:
           UPSTREAM_REF: ${{ needs.prepare.outputs.upstream_tag }}
-          WORKFLOW_PATH: .github/workflows/release-build.yml
+          WORKFLOW_PATH: .github/workflows/build-release.yml
           WORKFLOW_SHA: ${{ github.sha }}
           WORKFLOW_RUN_ID: ${{ github.run_id }}
         run: |
