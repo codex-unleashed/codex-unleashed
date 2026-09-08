@@ -32,15 +32,32 @@ prune_old_tags() {
   package_name="${repository_path#*/}"
   package_endpoint="${GITHUB_API_URL:-https://api.github.com}/orgs/${package_owner}/packages/container/${package_name}/versions"
 
-  stale_version_ids="$(gh api --paginate "$package_endpoint" --jq '
-    .[]
-    | .id as $id
-    | (.metadata.container.tags // [])[]?
-    | [$id, .]
-    | @tsv
-  ' | awk -v upstream_tag="$upstream_tag" '
-    $2 ~ /^cargo-/ && $2 !~ ("-" upstream_tag "$") { print $1 }
-  ' | sort -u)"
+  stale_version_ids="$(
+    gh api --paginate "$package_endpoint" --jq '
+      .[]
+      | [.id, ((.metadata.container.tags // []) | join(","))]
+      | @tsv
+    ' | awk -F '\t' -v current_suffix="-$upstream_tag" '
+      {
+        has_cargo = 0
+        has_current = 0
+        tag_count = split($2, tags, ",")
+        for (tag_index = 1; tag_index <= tag_count; tag_index++) {
+          if (tags[tag_index] ~ /^cargo-/) {
+            has_cargo = 1
+            if (length(tags[tag_index]) >= length(current_suffix) &&
+                substr(tags[tag_index], length(tags[tag_index]) - length(current_suffix) + 1) == current_suffix) {
+              has_current = 1
+            }
+          }
+        }
+        # A package version may carry several tags when two pushes have the
+        # same manifest. Never delete such a version if it also carries a
+        # current-release tag; deleting a package version deletes all its tags.
+        if (has_cargo && !has_current) print $1
+      }
+    ' | sort -u
+  )"
 
   while IFS= read -r version_id; do
     [[ -n "$version_id" ]] || continue
