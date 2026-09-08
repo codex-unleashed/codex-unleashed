@@ -805,7 +805,7 @@ jobs:
         continue-on-error: true
         shell: bash
         env:
-          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache
+          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/cargo-cache
           GHCR_CACHE_TAG: cargo-${{ matrix.target }}-${{ needs.prepare.outputs.upstream_tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -1038,7 +1038,7 @@ jobs:
         continue-on-error: true
         shell: bash
         env:
-          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache
+          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/cargo-cache
           GHCR_CACHE_TAG: cargo-${{ matrix.target }}-${{ needs.prepare.outputs.upstream_tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -1054,7 +1054,7 @@ jobs:
         continue-on-error: true
         shell: bash
         env:
-          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache
+          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/cargo-cache
           GHCR_CACHE_TAG: cargo-${{ matrix.target }}-${{ needs.prepare.outputs.upstream_tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -1263,7 +1263,7 @@ jobs:
         continue-on-error: true
         shell: bash
         env:
-          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache
+          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/cargo-cache
           GHCR_CACHE_TAG: cargo-${{ matrix.target }}-${{ needs.prepare.outputs.upstream_tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -1388,7 +1388,7 @@ jobs:
         continue-on-error: true
         shell: bash
         env:
-          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache
+          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/cargo-cache
           GHCR_CACHE_TAG: cargo-${{ matrix.target }}-${{ needs.prepare.outputs.upstream_tag }}
         run: |
           set -euo pipefail
@@ -1403,7 +1403,7 @@ jobs:
         continue-on-error: true
         shell: bash
         env:
-          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache
+          GHCR_CACHE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/cargo-cache
           GHCR_CACHE_TAG: cargo-${{ matrix.target }}-${{ needs.prepare.outputs.upstream_tag }}
         run: |
           set -euo pipefail
@@ -1597,6 +1597,9 @@ jobs:
             done
             patch_list="${patch_list%$'\n'}"
           fi
+          release_asset_tag="${{ needs.prepare.outputs.patched_tag }}"
+          release_asset_tag="${release_asset_tag//+/%2B}"
+          release_asset_base_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/${release_asset_tag}"
           cat > RELEASE_NOTES.md <<EOF
           # Codex Unleashed ${{ needs.prepare.outputs.release_name }}
 
@@ -1612,12 +1615,12 @@ jobs:
 
           | Platform | Asset |
           | --- | --- |
-          | Linux x86_64 | \`codex-package-x86_64-unknown-linux-musl.tar.gz\` |
-          | Linux ARM64 | \`codex-package-aarch64-unknown-linux-musl.tar.gz\` |
-          | macOS Intel | \`codex-package-x86_64-apple-darwin.tar.gz\` |
-          | macOS Apple Silicon | \`codex-package-aarch64-apple-darwin.tar.gz\` |
-          | Windows x86_64 | \`codex-package-x86_64-pc-windows-msvc.tar.gz\` |
-          | Windows ARM64 | \`codex-package-aarch64-pc-windows-msvc.tar.gz\` |
+          | Linux x86_64 | [\`codex-package-x86_64-unknown-linux-musl.tar.gz\`](${release_asset_base_url}/codex-package-x86_64-unknown-linux-musl.tar.gz) |
+          | Linux ARM64 | [\`codex-package-aarch64-unknown-linux-musl.tar.gz\`](${release_asset_base_url}/codex-package-aarch64-unknown-linux-musl.tar.gz) |
+          | macOS Intel | [\`codex-package-x86_64-apple-darwin.tar.gz\`](${release_asset_base_url}/codex-package-x86_64-apple-darwin.tar.gz) |
+          | macOS Apple Silicon | [\`codex-package-aarch64-apple-darwin.tar.gz\`](${release_asset_base_url}/codex-package-aarch64-apple-darwin.tar.gz) |
+          | Windows x86_64 | [\`codex-package-x86_64-pc-windows-msvc.tar.gz\`](${release_asset_base_url}/codex-package-x86_64-pc-windows-msvc.tar.gz) |
+          | Windows ARM64 | [\`codex-package-aarch64-pc-windows-msvc.tar.gz\`](${release_asset_base_url}/codex-package-aarch64-pc-windows-msvc.tar.gz) |
 
           ## What changed
 
