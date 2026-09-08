@@ -79,7 +79,7 @@ on:
         default: off
         type: choice
         options:
-          - off
+          - "off"
           - deterministic
       cache_audit:
         description: "Upload a complete Cargo cache file/size manifest for one diagnostic run."
