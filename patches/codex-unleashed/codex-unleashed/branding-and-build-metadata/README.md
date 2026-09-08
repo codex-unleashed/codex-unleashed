@@ -17,12 +17,18 @@ codex-cli 0.153.4+25
 ## `--build-info`
 
 ```text
-vendor: codex-unleashed
-vendor_url: https://github.com/codex-unleashed/codex-unleashed
-upstream_url: https://github.com/openai/codex
-upstream_version: 0.153.4
-build: 25
+Codex Unleashed build information
+
+Codex CLI version: 0.153.4+25
+Build number:      25
+
+Upstream project:  OpenAI Codex
+Upstream version:  0.153.4
+Upstream source:   https://github.com/openai/codex
+
+Provided by:       Codex Unleashed
+Project:           https://github.com/holdmyspot-com/codex-unleashed
 ```
 
 The interactive session header shows `v0.153.4+25` and the provider website
-`https://codex-unleashed.com/` beneath it, aligned with the title text.
+`https://holdmyspot.com/codex-unleashed/` beneath it, aligned with the title text.

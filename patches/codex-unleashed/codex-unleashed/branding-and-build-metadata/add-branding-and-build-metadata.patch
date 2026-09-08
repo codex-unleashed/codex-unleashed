@@ -1,16 +1,16 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Codex Unleashed <codex-unleashed@users.noreply.github.com>
+From: Codex Unleashed <holdmyspot-com@users.noreply.github.com>
 Date: Sun, 6 Sep 2026 00:00:00 -0400
 Subject: [PATCH] Identify Codex Unleashed provider builds
 
 ---
  codex-rs/cli/build.rs                    |  5 +++++
- codex-rs/cli/src/main.rs                 | 28 ++++++++++++++++++++++++++++-
+ codex-rs/cli/src/main.rs                 | 34 ++++++++++++++++++++++++++++++++++-
  codex-rs/tui/Cargo.toml                  |  1 +
  codex-rs/tui/build.rs                    |  7 +++++++
  codex-rs/tui/src/history_cell/session.rs | 11 ++++++++++-
  codex-rs/tui/src/version.rs              |  8 +++++++-
- 5 files changed, 49 insertions(+), 3 deletions(-)
+ 5 files changed, 55 insertions(+), 3 deletions(-)
 
 diff --git a/codex-rs/cli/build.rs b/codex-rs/cli/build.rs
 index abccc48..b5b80c1 100644
@@ -30,7 +30,7 @@ diff --git a/codex-rs/cli/src/main.rs b/codex-rs/cli/src/main.rs
 index 71d0323..ff77aee 100644
 --- a/codex-rs/cli/src/main.rs
 +++ b/codex-rs/cli/src/main.rs
-@@ -99,10 +99,27 @@ use codex_terminal_detection::TerminalName;
+@@ -99,10 +99,33 @@ use codex_terminal_detection::TerminalName;
  /// Codex CLI
  ///
  /// If no subcommand is specified, options will be forwarded to the interactive CLI.
@@ -42,13 +42,19 @@ index 71d0323..ff77aee 100644
 +);
 +
 +const BUILD_INFO: &str = concat!(
-+    "vendor: codex-unleashed\n",
-+    "vendor_url: https://github.com/codex-unleashed/codex-unleashed\n",
-+    "upstream_url: https://github.com/openai/codex\n",
-+    "upstream_version: ",
++    "Codex Unleashed build information\n\n",
++    "Codex CLI version: ",
 +    env!("CARGO_PKG_VERSION"),
-+    "\nbuild: ",
-+    env!("CODEX_UNLEASHED_BUILD_NUMBER")
++    "+",
++    env!("CODEX_UNLEASHED_BUILD_NUMBER"),
++    "\nBuild number:      ",
++    env!("CODEX_UNLEASHED_BUILD_NUMBER"),
++    "\n\nUpstream project:  OpenAI Codex\n",
++    "Upstream version:  ",
++    env!("CARGO_PKG_VERSION"),
++    "\nUpstream source:   https://github.com/openai/codex\n",
++    "\nProvided by:       Codex Unleashed\n",
++    "Project:           https://github.com/holdmyspot-com/codex-unleashed"
 +);
 +
  #[derive(Debug, Parser)]
@@ -172,6 +178,6 @@ index 8c8d108..516d07d 100644
 +    env!("CODEX_UNLEASHED_BUILD_NUMBER")
 +);
 +
-+pub const CODEX_UNLEASHED_URL: &str = "https://codex-unleashed.com/";
++pub const CODEX_UNLEASHED_URL: &str = "https://holdmyspot.com/codex-unleashed/";
 -- 
 2.43.0

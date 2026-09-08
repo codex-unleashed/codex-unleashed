@@ -407,11 +407,12 @@ python3 "${repo_root}/scripts/generate-release-manifest.py" \
   --release-dir "${output_dir}" \
   --output "${output_dir}/release-manifest.json" \
   --patch-repo "${repo_root}" \
-  --patch-repository "${PATCH_REPOSITORY:-Codex-Unleashed/codex-unleashed}" \
+  --patch-repository "${PATCH_REPOSITORY:-holdmyspot-com/codex-unleashed}" \
   --upstream-repository "${UPSTREAM_REPOSITORY:-openai/codex}" \
   --upstream-tag "${UPSTREAM_TAG:-}" \
   --upstream-commit "${UPSTREAM_SOURCE_SHA:-${original_upstream_sha}}" \
   --patched-tag "${PATCHED_TAG:-}" \
+  --build-number "${CODEX_UNLEASHED_BUILD_NUMBER:-}" \
   --build-date "${build_date}" \
   --builder-type "local-script" \
   --supported-targets "${build_target}" \

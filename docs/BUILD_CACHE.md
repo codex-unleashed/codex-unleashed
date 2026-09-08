@@ -6,7 +6,7 @@ cache quota, the release workflow also uses a GHCR overflow cache for the
 largest pruned Cargo target trees:
 
 ```text
-ghcr.io/codex-unleashed/cargo-cache:cargo-<target>-<upstream-tag>
+ghcr.io/holdmyspot-com/cargo-cache:cargo-<target>-<upstream-tag>
 ```
 
 The cache contains only the post-build Cargo target directory after release

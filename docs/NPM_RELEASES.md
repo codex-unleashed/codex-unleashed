@@ -3,7 +3,7 @@
 `publish_npm_from_release.py` converts the six public `codex-package-*` GitHub
 Release archives into one npm selector package and six platform packages. It
 defaults to the local Verdaccio registry at `http://127.0.0.1:4873` and uses
-the `@codex-unleashed` scope.
+the `@softspoken` scope.
 
 GitHub release tags may use `0.153.4+25`, but npm removes SemVer build
 metadata when publishing. The script therefore publishes that release as

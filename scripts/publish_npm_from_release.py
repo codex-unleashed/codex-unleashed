@@ -46,7 +46,7 @@ const platformName = {
   "x86_64-pc-windows-msvc": "win32-x64",
   "aarch64-pc-windows-msvc": "win32-arm64",
 }[target];
-const platformPackage = `@codex-unleashed/codex-${platformName}`;
+const platformPackage = `@softspoken/codex-${platformName}`;
 let platformRoot;
 try {
   platformRoot = path.dirname(require.resolve(`${platformPackage}/package.json`));
@@ -65,11 +65,11 @@ child.on("exit", (code, signal) => {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repository", default="codex-unleashed/codex-unleashed")
+    parser.add_argument("--repository", default="holdmyspot-com/codex-unleashed")
     parser.add_argument("--tag", help="GitHub release tag, for example rust-v0.153.4+25")
     parser.add_argument("--version", help="npm version; defaults to the version in --tag")
     parser.add_argument("--registry", default="http://127.0.0.1:4873")
-    parser.add_argument("--scope", default="@codex-unleashed")
+    parser.add_argument("--scope", default="@softspoken")
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--archive-dir", type=Path, help="Use downloaded archives from this directory")
     parser.add_argument("--publish", action="store_true", help="Run npm publish after packing")

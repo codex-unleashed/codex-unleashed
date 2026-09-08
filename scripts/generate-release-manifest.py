@@ -21,11 +21,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--release-dir", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--patch-repo", required=True)
-    parser.add_argument("--patch-repository", default="codex-unleashed/codex-unleashed")
+    parser.add_argument("--patch-repository", default="holdmyspot-com/codex-unleashed")
     parser.add_argument("--upstream-repository", default="openai/codex")
     parser.add_argument("--upstream-tag", default="")
     parser.add_argument("--upstream-commit", required=True)
     parser.add_argument("--patched-tag", default="")
+    parser.add_argument("--build-number", default="")
     parser.add_argument("--build-date", default="")
     parser.add_argument("--builder-type", default="github-actions")
     parser.add_argument("--workflow-path", default="")
@@ -72,10 +73,11 @@ def main() -> int:
         )
 
     manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "release": {
             "patch_repository": args.patch_repository,
             "patched_tag": args.patched_tag,
+            "build_number": args.build_number,
             "build_date": build_date,
             "builder_type": args.builder_type,
             "supported_targets": [item.strip() for item in args.supported_targets.split(",") if item.strip()],

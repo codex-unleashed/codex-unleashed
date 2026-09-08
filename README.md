@@ -4,17 +4,17 @@ A public patch queue and patched binary distribution for OpenAI Codex.
 
 > Warning: Unofficial, not affiliated with OpenAI.
 
-[![License](https://img.shields.io/github/license/codex-unleashed/codex-unleashed)](https://github.com/codex-unleashed/codex-unleashed/blob/main/LICENSE)
-[![Public patches](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/codex-unleashed/codex-unleashed/main/docs/badges/public-patches.json)](https://github.com/codex-unleashed/codex-unleashed/tree/main/patches)
-[![Early-access patches](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/codex-unleashed/codex-unleashed/main/docs/badges/early-access.json)](https://codex-unleashed.com/)
+[![License](https://img.shields.io/github/license/holdmyspot-com/codex-unleashed)](https://github.com/holdmyspot-com/codex-unleashed/blob/main/LICENSE)
+[![Public patches](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/holdmyspot-com/codex-unleashed/main/docs/badges/public-patches.json)](https://github.com/holdmyspot-com/codex-unleashed/tree/main/patches)
+[![Early-access patches](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/holdmyspot-com/codex-unleashed/main/docs/badges/early-access.json)](https://holdmyspot.com/codex-unleashed/)
 
-**[Get early access to Codex fixes and features →](https://codex-unleashed.com/)**
+**[Get early access to Codex fixes and features →](https://holdmyspot.com/codex-unleashed/)**
 
 ## Quickstart
 
 ### Install and run Codex CLI
 
-Download the latest [public release](https://github.com/codex-unleashed/codex-unleashed/releases/latest) and choose the archive for your platform:
+Download the latest [public release](https://github.com/holdmyspot-com/codex-unleashed/releases/latest) and choose the archive for your platform:
 
 - macOS Apple Silicon: `codex-package-aarch64-apple-darwin.tar.gz`
 - macOS Intel: `codex-package-x86_64-apple-darwin.tar.gz`
@@ -45,7 +45,7 @@ Then sign in with ChatGPT when prompted. Codex Unleashed uses the same CLI workf
 - Patches stay public, auditable, and temporary: they are carried here until the equivalent fix lands upstream, then removed.
 - Subscribers get priority consideration for requested fixes and early access to completed patched builds before those fixes roll into the public release.
 
-Public releases are available from the [latest GitHub Release](https://github.com/codex-unleashed/codex-unleashed/releases/latest). To request a fix, [open an issue](https://github.com/codex-unleashed/codex-unleashed/issues) with the affected version, reproduction steps, scope, and business impact.
+Public releases are available from the [latest GitHub Release](https://github.com/holdmyspot-com/codex-unleashed/releases/latest). To request a fix, [open an issue](https://github.com/holdmyspot-com/codex-unleashed/issues) with the affected version, reproduction steps, scope, and business impact.
 
 ## What To Expect
 
@@ -61,7 +61,7 @@ Subscribers pay US$12 per named developer per month, month-to-month, for priorit
 - You only pay for months when early-release fixes are available. No fixes? Your subscription will be credited.
 - Early-release fixes become eligible for public release at least 30 days after first customer delivery. Fixes that require substantial investment may remain in early access longer.
 - Full terms: [Commercial Terms](docs/COMMERCIAL_TERMS.md)
-- Subscribe: https://codex-unleashed.com/
+- Subscribe: https://holdmyspot.com/codex-unleashed/
 
 ## How Releases Work
 
@@ -75,6 +75,27 @@ Every release notes page lists:
 - Build date
 - Supported platforms
 - Checksums
+- A release manifest containing the upstream commit and patch hashes
+- A reproduction script for independently rebuilding and checking an artifact
+
+Release assets are published once. A later rebuild receives a new build number
+and release tag instead of replacing an existing release.
+
+### Independent verification
+
+Download `release-manifest.json`, `reproduce-release.sh`, and the package for
+your target from the same release. After installing the build prerequisites,
+run:
+
+```shell
+bash reproduce-release.sh release-manifest.json \
+  --target <rust-target> \
+  --output-dir reproduced
+```
+
+The script fetches the exact upstream commit, checks every patch hash, applies
+the patches from the recorded repository commit, rebuilds the package, and
+compares its SHA-256 digest with the published manifest.
 
 ## Versioning
 
@@ -89,11 +110,17 @@ The `+25` suffix identifies the vendor build. Build numbers are assigned by the 
 Invoke `codex --build-info` to see the provider and upstream details for an installed build:
 
 ```text
-vendor: codex-unleashed
-vendor_url: https://github.com/codex-unleashed/codex-unleashed
-upstream_url: https://github.com/openai/codex
-upstream_version: 0.153.4
-build: 25
+Codex Unleashed build information
+
+Codex CLI version: 0.153.4+25
+Build number:      25
+
+Upstream project:  OpenAI Codex
+Upstream version:  0.153.4
+Upstream source:   https://github.com/openai/codex
+
+Provided by:       Codex Unleashed
+Project:           https://github.com/holdmyspot-com/codex-unleashed
 ```
 
 ## Policies

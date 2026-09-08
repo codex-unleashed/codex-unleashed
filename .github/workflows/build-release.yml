@@ -1570,6 +1570,41 @@ jobs:
           set -euo pipefail
           bash scripts/verify-release-asset-contract.sh openai/codex "$UPSTREAM_TAG" release-stage
 
+      - name: Add reproducibility materials
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp scripts/reproduce-release.sh release-stage/reproduce-release.sh
+          chmod +x release-stage/reproduce-release.sh
+          (
+            cd release-stage
+            sha256sum codex-package-*.tar.gz reproduce-release.sh > SHA256SUMS
+          )
+          python3 scripts/generate-release-manifest.py \
+            --release-dir release-stage \
+            --output release-stage/release-manifest.json \
+            --patch-repo . \
+            --patch-repository "$GITHUB_REPOSITORY" \
+            --upstream-repository openai/codex \
+            --upstream-tag "${{ needs.prepare.outputs.upstream_tag }}" \
+            --upstream-commit "${{ needs.prepare.outputs.upstream_sha }}" \
+            --patched-tag "${{ needs.prepare.outputs.patched_tag }}" \
+            --build-number "${{ needs.prepare.outputs.build_number }}" \
+            --build-date "${{ needs.prepare.outputs.build_date }}" \
+            --builder-type github-actions \
+            --workflow-path .github/workflows/build-release.yml \
+            --workflow-ref "$GITHUB_REF" \
+            --workflow-sha "$GITHUB_SHA" \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --workflow-run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --supported-targets "${{ needs.prepare.outputs.supported_targets }}" \
+            --consolidated-checksums SHA256SUMS \
+            --attestation-bundle ""
+
+      - name: Verify release manifest and checksums
+        shell: bash
+        run: bash scripts/verify-release.sh release-stage --patch-repo .
+
       - name: Attest release package archives
         uses: actions/attest-build-provenance@v2
         with:
@@ -1632,16 +1667,43 @@ jobs:
           - Build date: \`${{ needs.prepare.outputs.build_date }}\`
           - Supported targets: \`${{ needs.prepare.outputs.supported_targets }}\`
 
+          ## Verify this build
+
+          - [Source and artifact manifest](${release_asset_base_url}/release-manifest.json)
+          - [SHA-256 checksums](${release_asset_base_url}/SHA256SUMS)
+          - [Reproduction script](${release_asset_base_url}/reproduce-release.sh)
+
           This release is intended as a temporary patch layer; patches are removed once the corresponding fix is available upstream.
           EOF
 
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
-        with:
-          tag_name: ${{ needs.prepare.outputs.patched_tag }}
-          name: ${{ needs.prepare.outputs.release_name }}
-          body_path: RELEASE_NOTES.md
-          files: release-stage/*
+      - name: Refuse to replace an existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ needs.prepare.outputs.patched_tag }}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists: $tag" >&2
+            exit 1
+          fi
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" >/dev/null 2>&1; then
+            echo "Tag already exists: $tag" >&2
+            exit 1
+          fi
+
+      - name: Publish immutable GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "${{ needs.prepare.outputs.patched_tag }}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "${{ needs.prepare.outputs.release_name }}" \
+            --notes-file RELEASE_NOTES.md \
+            release-stage/*
 
   record-failure-marker:
     needs:

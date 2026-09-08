@@ -1,5 +1,5 @@
 From 5d1b2876c64fb2d51a24f66d5247ed5d0d7bce63 Mon Sep 17 00:00:00 2001
-From: Codex <codex-unleashed@users.noreply.github.com>
+From: Codex <holdmyspot-com@users.noreply.github.com>
 Date: Fri, 4 Sep 2026 00:24:01 -0400
 Subject: [PATCH 1/2] Add regression test for compacted history replay
 
@@ -252,4 +252,3 @@ index 31af6ad..3852426 100644
      let (mut chat, mut rx, _ops) = make_chatwidget_manual(/*model_override*/ None).await;
 -- 
 2.43.0
-

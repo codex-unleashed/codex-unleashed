@@ -1,0 +1,22 @@
+{
+  "name": "workspace",
+  "version": "1.0.0",
+  "description": "A public patch queue and patched binary distribution for OpenAI Codex.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/holdmyspot-com/codex-unleashed.git"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/holdmyspot-com/codex-unleashed/issues"
+  },
+  "homepage": "https://github.com/holdmyspot-com/codex-unleashed#readme"
+}

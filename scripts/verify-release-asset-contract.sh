@@ -35,10 +35,19 @@ is_upstream_asset() {
 checked=0
 while IFS= read -r -d '' file; do
   name="$(basename "$file")"
-  if [[ "$name" != codex-package-*.tar.gz ]]; then
-    echo "Release contains a non-codex-package asset: ${name}" >&2
-    exit 1
-  fi
+  case "$name" in
+    SHA256SUMS|release-manifest.json|reproduce-release.sh)
+      # Release metadata is produced by this repository and is intentionally
+      # not part of upstream's package-asset subset.
+      continue
+      ;;
+    codex-package-*.tar.gz)
+      ;;
+    *)
+      echo "Release contains an unexpected asset: ${name}" >&2
+      exit 1
+      ;;
+  esac
   normalized="$name"
 
   if ! is_upstream_asset "$normalized"; then
