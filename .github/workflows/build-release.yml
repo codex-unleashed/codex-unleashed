@@ -891,17 +891,14 @@ jobs:
             fi
             if [[ "${{ matrix.target }}" == *linux-musl ]]; then
               # build-release.sh strips bwrap before calculating its embedded
-              # digest. Keep a temporary debug file for the other binaries so
-              # the package has the same GNU debug link section as upstream,
-              # without publishing the symbols archive.
+              # digest. The other binaries are stripped here. Do not add a
+              # GNU debug link: the release does not publish the referenced
+              # symbol files, and its CRC would otherwise vary with details
+              # of the unshipped debug output.
               if [[ "${binary}" == "bwrap" ]]; then
                 continue
               fi
-              symbols_dir="${RUNNER_TEMP}/codex-symbols-${{ matrix.target }}-${{ matrix.bundle }}"
-              mkdir -p "${symbols_dir}"
-              objcopy --only-keep-debug "${binary_path}" "${symbols_dir}/${binary}.debug"
               strip --strip-debug --strip-unneeded "${binary_path}"
-              objcopy --add-gnu-debuglink="${symbols_dir}/${binary}.debug" "${binary_path}"
             else
               # Upstream archives dSYMs and then strips the distributed
               # executable with these macOS-specific flags.
