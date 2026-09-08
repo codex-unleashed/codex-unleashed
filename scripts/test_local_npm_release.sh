@@ -15,7 +15,7 @@ registry="${2:-http://127.0.0.1:4873}"
 test_dir="$(mktemp -d "${TMPDIR:-/tmp}/codex-npm-install.XXXXXX")"
 trap 'rm -rf "$test_dir"' EXIT
 
-npm init --yes --scope softspoken --prefix "$test_dir" >/dev/null
+npm init --yes --scope holdmyspot --prefix "$test_dir" >/dev/null
 package_tarball="$(npm pack "$package_dir" --pack-destination "$test_dir" --silent)"
 npm install --prefix "$test_dir" --registry "$registry" "$test_dir/$package_tarball"
 npm exec --prefix "$test_dir" -- codex --version

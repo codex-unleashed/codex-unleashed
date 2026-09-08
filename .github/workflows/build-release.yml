@@ -1525,6 +1525,13 @@ jobs:
       - name: Checkout patch repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      - name: Configure npm registry
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          scope: "@holdmyspot"
+
       - name: Download target artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -1704,6 +1711,21 @@ jobs:
             --title "${{ needs.prepare.outputs.release_name }}" \
             --notes-file RELEASE_NOTES.md \
             release-stage/*
+
+      - name: Publish npm packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/publish_npm_from_release.py \
+            --repository "${GITHUB_REPOSITORY}" \
+            --tag "${{ needs.prepare.outputs.patched_tag }}" \
+            --archive-dir release-stage \
+            --output-dir npm-release \
+            --registry https://registry.npmjs.org \
+            --scope @holdmyspot \
+            --publish
 
   record-failure-marker:
     needs:
