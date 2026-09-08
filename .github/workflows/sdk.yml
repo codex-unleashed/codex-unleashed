@@ -146,7 +146,9 @@ jobs:
           CODEX_EXEC_PATH: ${{ runner.temp }}/codex-sdk-ci/codex
         run: |
           set -euo pipefail
-          pnpm --dir upstream/sdk/typescript run test
+          # The first SDK test starts a freshly compiled binary and can exceed
+          # Jest's five-second per-test default on a cold GitHub runner.
+          pnpm --dir upstream/sdk/typescript run test -- --testTimeout=30000
 
       - name: Check for a clean worktree
         if: always() && !cancelled()
