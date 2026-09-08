@@ -33,7 +33,9 @@ case "$operation" in
     mkdir -p "$target_directory"
     archive_directory="$(mktemp -d "${RUNNER_TEMP:-/tmp}/codex-ghcr-cache.XXXXXX")"
     trap 'rm -rf "$archive_directory"' EXIT
-    oras pull "$reference" --output "$archive_directory"
+    oras pull "$reference" \
+      --allow-path-traversal \
+      --output "$archive_directory"
     tar --zstd -xf "$archive_directory/cargo-target.tar.zst" -C "$target_directory"
     ;;
   push)
