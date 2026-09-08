@@ -695,10 +695,23 @@ jobs:
           # which changes Cargo fingerprints.
           release_checkout="${GITHUB_WORKSPACE%/*/*}/codex/codex"
           if [[ "${release_checkout}" != "${GITHUB_WORKSPACE}/upstream" ]]; then
+            # setup-ci and the GHCR restore may already have populated this
+            # target directory. Preserve it while replacing the checkout;
+            # removing release_checkout wholesale would otherwise discard the
+            # restored Cargo fingerprints before Cargo can use them.
+            preserved_target="${RUNNER_TEMP}/codex-release-target"
+            if [[ -d "${release_checkout}/codex-rs/target" ]]; then
+              rm -rf "${preserved_target}"
+              mv "${release_checkout}/codex-rs/target" "${preserved_target}"
+            fi
             rm -rf "${release_checkout}"
             mkdir -p "$(dirname "${release_checkout}")"
             mv "${GITHUB_WORKSPACE}/upstream" "${release_checkout}"
             ln -s "${release_checkout}" "${GITHUB_WORKSPACE}/upstream"
+            if [[ -d "${preserved_target}" ]]; then
+              mkdir -p "${release_checkout}/codex-rs"
+              mv "${preserved_target}" "${release_checkout}/codex-rs/target"
+            fi
           fi
           mkdir -p "${release_checkout}/codex-rs/target"
           # Upstream's release workflow exposes the physical source checkout
