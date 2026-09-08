@@ -1,0 +1,55 @@
+name: Test GHCR cache pruning
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up ORAS
+        uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
+
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GHCR_TOKEN" | oras login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
+
+      - name: Seed and prune a stale upstream-version tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          repository="ghcr.io/${{ github.repository_owner }}/codex-unleashed-cargo-cache"
+          current_tag="$(oras repo tags "$repository" | grep -E '^cargo-.*-rust-v0\.153\.4$' | head -n 1)"
+          [[ -n "$current_tag" ]] || {
+            echo "No current upstream-version cache tag was found" >&2
+            exit 1
+          }
+          stale_tag="${current_tag%-rust-v0.153.4}-rust-v0.153.3"
+
+          echo "Copying $current_tag to stale test tag $stale_tag"
+          oras cp "$repository:$current_tag" "$repository:$stale_tag"
+          echo "Tags before pruning:"
+          oras repo tags "$repository"
+
+          bash .github/scripts/ghcr-cargo-target-cache.sh prune \
+            "$repository" \
+            "$current_tag" \
+            "$RUNNER_TEMP" \
+            rust-v0.153.4
+
+          echo "Tags after pruning:"
+          tags_after="$(oras repo tags "$repository")"
+          printf '%s\n' "$tags_after"
+          if grep -Fxq "$stale_tag" <<<"$tags_after"; then
+            echo "Stale cache tag was not removed: $stale_tag" >&2
+            exit 1
+          fi
+          grep -Fxq "$current_tag" <<<"$tags_after"
