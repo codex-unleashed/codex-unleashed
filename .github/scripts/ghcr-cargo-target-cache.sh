@@ -46,6 +46,7 @@ case "$operation" in
     archive="$archive_directory/cargo-target.tar.zst"
     tar --zstd -cf "$archive" -C "$target_directory" .
     oras push "$reference" \
+      --disable-path-validation \
       --artifact-type application/vnd.codex-unleashed.cargo-target.v1 \
       "$archive:application/vnd.codex-unleashed.cargo-target.tar+zstd"
 
