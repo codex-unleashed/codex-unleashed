@@ -1,5 +1,9 @@
 # Avoid slow agent switching and resume
 
+The implementation and its regression tests are carried together in
+`avoid-slow-agent-switching-and-resume.patch` so the patch queue applies this
+fix atomically.
+
 - Upstream issue: [openai/codex#34776](https://github.com/openai/codex/issues/34776)
 - Applies to: upstream `main`
 - Related upstream work: [openai/codex#36948](https://github.com/openai/codex/pull/36948), [openai/codex#36950](https://github.com/openai/codex/pull/36950)
